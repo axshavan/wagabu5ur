@@ -15,13 +15,20 @@ except Exception as e:
 
 # load image data
 pixelmap = []
-pixelrow = []
+row = []
 for x in range(image.width):
-    pixelrow = []
+    row = []
     for y in range(image.height):
         pixel = image.getpixel((x, y))
-        pixelrow.append(pixel)
-    pixelmap.append(pixelrow)
+        row.append(pixel)
+    pixelmap.append(row)
 
-wg5borders_grid = wg5borders.grid(pixelmap, wg5borders.GRID_STEPX, wg5borders.GRID_STEPY)
-# ...
+wg5borders_grid = wg5borders.grid(pixelmap, wg5borders.GRID_STEP_X, wg5borders.GRID_STEP_Y)
+wg5borders_grid = wg5borders.grid_gradients(wg5borders_grid)
+wg5borders_grid = wg5borders.borders_from_grid(pixelmap, wg5borders_grid)
+
+# dump borders to the picture
+for point in wg5borders_grid:
+    image.putpixel((point.x, point.y), (0, 0, 0))
+
+image.save('out.jpg')
