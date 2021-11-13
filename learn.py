@@ -25,7 +25,10 @@ for x in range(image.width):
 
 wg5borders_grid = wg5borders.grid(pixelmap)
 wg5borders_grid = wg5borders.grid_gradients(wg5borders_grid)
-wg5borders_grid = wg5borders.borders_from_grid(pixelmap, wg5borders_grid)
+wg5borders_grid = wg5borders.border_points_from_grid(pixelmap, wg5borders_grid)
+wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
+
+print(len(wg5borders_grid))
 
 # dump borders to the picture
 for point in wg5borders_grid:

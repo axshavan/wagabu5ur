@@ -81,7 +81,7 @@ def get_gradient_middle(gradient_set: list) -> int:
     return 0
 
 
-def borders_from_grid(pixelmap: list, grid: list) -> list:
+def border_points_from_grid(pixelmap: list, grid: list) -> list:
     border_points = []
     x = 0
     pixelmap_maxx = len(pixelmap) - 1
@@ -144,3 +144,24 @@ def borders_from_grid(pixelmap: list, grid: list) -> list:
             y += 1
         x += 1
     return border_points
+
+
+def reduce_border_points(border_points: list) -> list:
+    reduced_border_points = []
+    for i in range(0, len(border_points) - 1):
+        if border_points[i].direction == 0:
+            continue
+        for j in range(i + 1, len(border_points)):
+            if border_points[j].x - 1 <= border_points[i].x <= border_points[j].x + 1 and border_points[j].y - 1 <= border_points[i].y <= border_points[j].y + 1:
+                border_points[j].direction = 0
+            else:
+                if border_points[i].x == border_points[j].x and abs(border_points[i].y - border_points[j].y) <= GRID_STEP:
+                    for k in range(j + 1, len(border_points)):
+                        if border_points[j].x == border_points[k].x and abs(border_points[j].y - border_points[k].y) <= GRID_STEP:
+                            border_points[j].direction = 0
+                if border_points[i].y == border_points[j].y and abs(border_points[i].x - border_points[j].x) <= GRID_STEP:
+                    for k in range(j + 1, len(border_points)):
+                        if border_points[j].y == border_points[k].y and abs(border_points[j].x - border_points[k].x) <= GRID_STEP:
+                            border_points[j].direction = 0
+        reduced_border_points.append(border_points[i])
+    return reduced_border_points
