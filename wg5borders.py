@@ -1,7 +1,6 @@
 #!/bin/python3
 
-GRID_STEP_X = 5
-GRID_STEP_Y = 5
+GRID_STEP = 5
 BORDER_THRESHOLD = 25
 
 
@@ -18,29 +17,29 @@ class WG5GridNode:
 class WG5BorderPoint:
     x = 0
     y = 0
-    direction = 0  # 0 - horizontal, 1 - vertical, 2 - diagonal tl-br, 3 - diagonal tr-bl
+    direction = 0  # 0 - not sure, 1 - vertical, 2 - diagonal bl-tr, 3 - horizontal, 4 - diagonal tl-br
 
 
-def grid(pixelmap, step_x: int = 0, step_y: int = 0) -> list:
-    step_x = int(step_x)
-    step_y = int(step_y)
-    if step_x < 1:
-        step_x = GRID_STEP_X
-    if step_y < 1:
-        step_y = GRID_STEP_Y
+def grayscale_from_rgb(pixel) -> float:
+    return (pixel[0] + pixel[1] + pixel[2]) / 3  # todo: make it less ugly
+
+
+def grid(pixelmap, grid_step: int = 0) -> list:
+    grid_step = int(grid_step)
+    if grid_step < 1:
+        grid_step = GRID_STEP
     x = 0
-    y = 0
     grid = []
     for col in pixelmap:
-        if x % step_x == 0:
+        if x % grid_step == 0:
             y = 0
             grid_col = []
             for pixel in col:
-                if y % step_y == 0:
+                if y % grid_step == 0:
                     grid_node = WG5GridNode()
                     grid_node.x = x
                     grid_node.y = y
-                    grid_node.pixel = (pixel[0] + pixel[1] + pixel[2]) / 3  # todo: convert to grayscale
+                    grid_node.pixel = grayscale_from_rgb(pixel)
                     grid_col.append(grid_node)
                 y += 1
             grid.append(grid_col)
@@ -58,7 +57,6 @@ def grid_gradients(grid: list) -> list:
             if y > 0 and x < max_x:
                 node.gradient_tr = node.pixel - grid[x + 1][y - 1].pixel
             if y < max_y:
-                print(x,y)
                 node.gradient_b = node.pixel - grid[x][y + 1].pixel
                 if x < max_x:
                     node.gradient_br = node.pixel - grid[x + 1][y + 1].pixel
@@ -70,35 +68,78 @@ def grid_gradients(grid: list) -> list:
     return grid
 
 
+def get_gradient_middle(gradient_set: list) -> int:
+    diff_set = []
+    max_diff = 0.0
+    for a in range(0, len(gradient_set)):
+        diff = abs(gradient_set[a] - gradient_set[a - 1]) if a > 0 else 0
+        max_diff = max(max_diff, diff)
+        diff_set.append(diff)
+    for a in range(0, len(diff_set)):
+        if diff_set[a] == max_diff:
+            return a
+    return 0
+
+
 def borders_from_grid(pixelmap: list, grid: list) -> list:
     border_points = []
     x = 0
+    pixelmap_maxx = len(pixelmap) - 1
+    pixelmap_maxy = len(pixelmap[pixelmap_maxx]) - 1
     for col in grid:
         for node in col:
             y = 0
             if abs(node.gradient_tr) > BORDER_THRESHOLD:
                 border_point = WG5BorderPoint()
-                border_point.direction = 2
-                border_point.x = node.x
-                border_point.y = node.y
+                border_point.direction = 4
+                gradient_set = []
+                for i in range(0, GRID_STEP + 1):
+                    if node.x + i > pixelmap_maxx:
+                        break
+                    if node.y - i < 0:
+                        break
+                    gradient_set.append(grayscale_from_rgb(pixelmap[node.x + i][node.y - i]))
+                i = get_gradient_middle(gradient_set)
+                border_point.x = node.x + i
+                border_point.y = node.y - i
                 border_points.append(border_point)
             if abs(node.gradient_r) > BORDER_THRESHOLD:
                 border_point = WG5BorderPoint()
                 border_point.direction = 1
-                border_point.x = node.x
+                gradient_set = []
+                for i in range(0, GRID_STEP + 1):
+                    if node.x + i > pixelmap_maxx:
+                        break
+                    gradient_set.append(grayscale_from_rgb(pixelmap[node.x + i][node.y]))
+                i = get_gradient_middle(gradient_set)
+                border_point.x = node.x + i
                 border_point.y = node.y
                 border_points.append(border_point)
             if abs(node.gradient_b) > BORDER_THRESHOLD:
                 border_point = WG5BorderPoint()
-                border_point.direction = 0
+                border_point.direction = 3
+                gradient_set = []
+                for i in range(0, GRID_STEP + 1):
+                    if node.y + i > pixelmap_maxy:
+                        break
+                    gradient_set.append(grayscale_from_rgb(pixelmap[node.x][node.y + i]))
+                i = get_gradient_middle(gradient_set)
                 border_point.x = node.x
-                border_point.y = node.y
+                border_point.y = node.y + i
                 border_points.append(border_point)
             if abs(node.gradient_br) > BORDER_THRESHOLD:
                 border_point = WG5BorderPoint()
-                border_point.direction = 3
-                border_point.x = node.x
-                border_point.y = node.y
+                border_point.direction = 2
+                gradient_set = []
+                for i in range(0, GRID_STEP + 1):
+                    if node.x + i > pixelmap_maxx:
+                        break
+                    if node.y + i > pixelmap_maxy:
+                        break
+                    gradient_set.append(grayscale_from_rgb(pixelmap[node.x + i][node.y + i]))
+                i = get_gradient_middle(gradient_set)
+                border_point.x = node.x + i
+                border_point.y = node.y + i
                 border_points.append(border_point)
             y += 1
         x += 1

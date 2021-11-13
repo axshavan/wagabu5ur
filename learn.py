@@ -23,7 +23,7 @@ for x in range(image.width):
         row.append(pixel)
     pixelmap.append(row)
 
-wg5borders_grid = wg5borders.grid(pixelmap, wg5borders.GRID_STEP_X, wg5borders.GRID_STEP_Y)
+wg5borders_grid = wg5borders.grid(pixelmap)
 wg5borders_grid = wg5borders.grid_gradients(wg5borders_grid)
 wg5borders_grid = wg5borders.borders_from_grid(pixelmap, wg5borders_grid)
 
