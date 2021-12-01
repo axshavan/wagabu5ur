@@ -39,8 +39,8 @@ wg5borders_grid = wg5borders.grid_gradients(wg5borders_grid)
 # get the border points out from the gradient grids
 wg5borders_grid = wg5borders.border_points_from_grid(pixelmap, wg5borders_grid)
 
-# ...
-# wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
+# reduce the number of border points
+wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
 
 # segments from the border points
 wg5borders_segments = wg5borders.segment_from_border_points(wg5borders_grid)
@@ -62,22 +62,23 @@ for col in wg5borders_grid:
 print(points_count)
 
 # dump border segments to the picture
-segments_count = 0
-draw = ImageDraw.Draw(image)
-for col in wg5borders_segments:
-    for cell in col:
-        for segment in cell:
-            if segment is not False:
-                segments_count += 1
-                if segment.direction == wg5borders.SEGMENT_TYPE_DIAGONAL_TLBR:
-                    draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=(0, 255, 0))
-                elif segment.direction == wg5borders.SEGMENT_TYPE_DIAGONAL_BLTR:
-                    draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=(255, 0, 0))
-                elif segment.direction == wg5borders.SEGMENT_TYPE_VERTICAL:
-                    draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=(0, 0, 255))
-                else:
+if True:
+    segments_count = 0
+    draw = ImageDraw.Draw(image)
+    for col in wg5borders_segments:
+        for cell in col:
+            for segment in cell:
+                if segment is not False:
+                    segments_count += 1
+                    # if segment.direction == wg5borders.SEGMENT_TYPE_DIAGONAL_TLBR:
+                    #     draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=(0, 255, 0))
+                    # elif segment.direction == wg5borders.SEGMENT_TYPE_DIAGONAL_BLTR:
+                    #     draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=(255, 0, 0))
+                    # elif segment.direction == wg5borders.SEGMENT_TYPE_VERTICAL:
+                    #     draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=(0, 0, 255))
+                    # else:
                     draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=(0, 0, 0))
-                #image.putpixel((segment.start_x * 4, segment.start_y * 4), (64, 255, 0))
-                #image.putpixel((segment.end_x * 4, segment.end_y * 4), (0, 64, 255))
-print(segments_count)
+                    #image.putpixel((segment.start_x * 4, segment.start_y * 4), (64, 255, 0))
+                    #image.putpixel((segment.end_x * 4, segment.end_y * 4), (0, 64, 255))
+    print(segments_count)
 image.save('out.jpg', quality=95)
