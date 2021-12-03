@@ -32,6 +32,7 @@ class WG5BorderPoint:
     y = 0  # pixel y
     direction = 0
     #angle = 0  # angle of the border, tan
+    #segment_ids = []
 
 
 class WG5Segment:
@@ -41,8 +42,10 @@ class WG5Segment:
     end_y = 0  # pixel y
     #direction = 0
     #angle = 0  # angle of the segment, tan
-    end_cell_x = 0  # grid cell index
-    end_cell_y = 0  # grid cell index
+    #end_cell_x = 0  # grid cell index
+    #end_cell_y = 0  # grid cell index
+    #start_segment_ids = []
+    #end_segment_ids = []
 
 
 def grayscale_from_rgb(pixel) -> float:
@@ -225,12 +228,13 @@ def reduce_border_points(border_points_grid: list) -> list:
     grid_maxy = len(border_points_grid[0]) - 1
     for x in range(0, grid_maxx):
         for y in range(0, grid_maxy):
-            for j in range(0, len(border_points_grid[x][y])):
+            grid_maxj = len(border_points_grid[x][y])
+            for j in range(0, grid_maxj):
                 p = border_points_grid[x][y][j]
                 if p is not False:
 
                     # current cell
-                    for i in range(0, len(border_points_grid[x][y])):
+                    for i in range(0, grid_maxj):
                         r = border_points_grid[x][y][i]
                         if r is False:
                             continue
@@ -250,7 +254,6 @@ def reduce_border_points(border_points_grid: list) -> list:
                             if r is False:
                                 continue
                             if (
-                                    p.direction != r.direction and
                                     abs(p.x - r.x) <= BORDER_POINTS_MERGE_THRESHOLD and
                                     abs(p.y - r.y) <= BORDER_POINTS_MERGE_THRESHOLD):
                                 p.x = round((p.x + r.x) / 2)
@@ -265,7 +268,6 @@ def reduce_border_points(border_points_grid: list) -> list:
                             if r is False:
                                 continue
                             if (
-                                    p.direction != r.direction and
                                     abs(p.x - r.x) <= BORDER_POINTS_MERGE_THRESHOLD and
                                     abs(p.y - r.y) <= BORDER_POINTS_MERGE_THRESHOLD):
                                 p.x = round((p.x + r.x) / 2)
@@ -280,7 +282,6 @@ def reduce_border_points(border_points_grid: list) -> list:
                             if r is False:
                                 continue
                             if (
-                                    p.direction != r.direction and
                                     abs(p.x - r.x) <= BORDER_POINTS_MERGE_THRESHOLD and
                                     abs(p.y - r.y) <= BORDER_POINTS_MERGE_THRESHOLD):
                                 p.x = round((p.x + r.x) / 2)
@@ -295,7 +296,6 @@ def reduce_border_points(border_points_grid: list) -> list:
                             if r is False:
                                 continue
                             if (
-                                    p.direction != r.direction and
                                     abs(p.x - r.x) <= BORDER_POINTS_MERGE_THRESHOLD and
                                     abs(p.y - r.y) <= BORDER_POINTS_MERGE_THRESHOLD):
                                 p.x = round((p.x + r.x) / 2)
@@ -307,103 +307,313 @@ def reduce_border_points(border_points_grid: list) -> list:
     return border_points_grid
 
 
-def segment_from_border_points(border_points_grid: list) -> list:
-    segments_grid = []
-    bp_grid_maxx = len(border_points_grid) - 1
-    bp_grid_maxy = len(border_points_grid[0]) - 1
-    for x in range(0, bp_grid_maxx):
-        segments_grid_col = []
-        for y in range(0, bp_grid_maxy):
-            segments_grid_cell = []
-            if len(border_points_grid[x][y]) > 1:
-                bp_cell_len = len(border_points_grid[x][y])
-                for i in range(0, bp_cell_len - 1):
-                    if border_points_grid[x][y][i] is False or border_points_grid[x][y][i + 1] is False:
-                        continue
-                    segment = WG5Segment()
-                    segment.start_x = border_points_grid[x][y][i].x
-                    segment.start_y = border_points_grid[x][y][i].y
-                    segment.end_x = border_points_grid[x][y][i + 1].x
-                    segment.end_y = border_points_grid[x][y][i + 1].y
-                    segment.end_cell_y = x
-                    segment.end_cell_y = y
-                    # direction ?
-                    # angle ?
-                    segments_grid_cell.append(segment)
+def segments_from_border_points(border_points_grid: list) -> list:
+    segments_list = []
+    grid_maxx = len(border_points_grid) - 1
+    grid_maxy = len(border_points_grid[0]) - 1
+    for x in range(0, grid_maxx):
+        for y in range(0, grid_maxy):
+            grid_maxj = len(border_points_grid[x][y])
+            for j in range(0, grid_maxj):
+                p = border_points_grid[x][y][j]
+                if p is not False:
+                    closest_points = []
 
-            for c in border_points_grid[x][y]:
-                if c is False:
-                    continue
-
-                # right
-                if c.direction != BORDER_TYPE_VERTICAL:
-                    for r in border_points_grid[x + 1][y]:
+                    # current cell
+                    for i in range(0, grid_maxj):
+                        r = border_points_grid[x][y][i]
                         if r is False:
                             continue
-                        if r.direction == c.direction:
-                            segment = WG5Segment()
-                            segment.start_x = c.x
-                            segment.start_y = c.y
-                            segment.end_x = r.x
-                            segment.end_y = r.y
-                            #segment.direction = SEGMENT_TYPE_HORIZONTAL
-                            # angle ?
-                            segment.end_cell_x = x + 1
-                            segment.end_cell_y = y
-                            segments_grid_cell.append(segment)
+                        if p.direction != r.direction:
+                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y)])
 
-                # bottom-right
-                if c.direction != BORDER_TYPE_DIAGONAL_BLTR:
-                    for r in border_points_grid[x + 1][y + 1]:
-                        if r is False:
-                            continue
-                        if r.direction == c.direction:
-                            segment = WG5Segment()
-                            segment.start_x = c.x
-                            segment.start_y = c.y
-                            segment.end_x = r.x
-                            segment.end_y = r.y
-                            #segment.direction = SEGMENT_TYPE_DIAGONAL_TLBR
-                            segment.end_cell_x = x + 1
-                            segment.end_cell_y = y + 1
-                            segments_grid_cell.append(segment)
+                    # right
+                    if x < grid_maxx:
+                        for i in range(0, len(border_points_grid[x + 1][y])):
+                            r = border_points_grid[x + 1][y][i]
+                            if r is False:
+                                continue
+                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y)])
 
-                # bottom
-                if c.direction != BORDER_TYPE_HORIZONTAL:
-                    for r in border_points_grid[x][y + 1]:
-                        if r is False:
-                            continue
-                        if r.direction == c.direction:
-                            segment = WG5Segment()
-                            segment.start_x = c.x
-                            segment.start_y = c.y
-                            segment.end_x = r.x
-                            segment.end_y = r.y
-                            #segment.direction = SEGMENT_TYPE_VERTICAL
-                            # angle ?
-                            segment.end_cell_x = x
-                            segment.end_cell_y = y + 1
-                            segments_grid_cell.append(segment)
+                    # bottom-right
+                    if y < grid_maxy and x < grid_maxx:
+                        for i in range(0, len(border_points_grid[x + 1][y + 1])):
+                            r = border_points_grid[x + 1][y + 1][i]
+                            if r is False:
+                                continue
+                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y)])
 
-                # bottom-left
-                if c.direction != BORDER_TYPE_DIAGONAL_TLBR and y > 0:
-                    for r in border_points_grid[x + 1][y - 1]:
-                        if r is False:
-                            continue
-                        if r.direction == c.direction:
-                            segment = WG5Segment()
-                            segment.start_x = c.x
-                            segment.start_y = c.y
-                            segment.end_x = r.x
-                            segment.end_y = r.y
-                            #segment.direction = SEGMENT_TYPE_DIAGONAL_BLTR
-                            segment.end_cell_x = x + 1
-                            segment.end_cell_y = y - 1
-                            segments_grid_cell.append(segment)
+                    # bottom
+                    if y < grid_maxx:
+                        for i in range(0, len(border_points_grid[x][y + 1])):
+                            r = border_points_grid[x][y + 1][i]
+                            if r is False:
+                                continue
+                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y)])
 
-            segments_grid_col.append(segments_grid_cell)
-        segments_grid.append(segments_grid_col)
-    return segments_grid
+                    # bottom-left
+                    if y < grid_maxx and x > 0:
+                        for i in range(0, len(border_points_grid[x - 1][y + 1])):
+                            r = border_points_grid[x - 1][y + 1][i]
+                            if r is False:
+                                continue
+                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y)])
+
+                    if len(closest_points) > 0:
+                        dist1 = 0
+                        dist2 = 0
+                        for i in closest_points:
+                            dist1 = i[1] if i[1] < dist1 or dist1 == 0 else dist1
+                            dist2 = i[1] if (i[1] < dist1 < dist2) or dist2 == 0 else dist2
+                        if dist1 > 2 * GRID_STEP * GRID_STEP:
+                            dist1 = 0
+                        if dist2 > 2 * GRID_STEP * GRID_STEP:
+                            dist2 = 0
+                        for i in closest_points:
+                            if i[1] == dist1 or i[1] == dist2:
+                                segment = WG5Segment()
+                                # start_segment_ids
+                                # end_segment_ids
+                                segment.start_x = p.x
+                                segment.start_y = p.y
+                                segment.end_x = i[0].x
+                                segment.end_y = i[0].y
+                                segments_list.append(segment)
+    return segments_list
+
+# def segments_from_border_points_1(border_points_grid: list) -> list:
+#     segments_list = []
+#     grid_maxx = len(border_points_grid) - 1
+#     grid_maxy = len(border_points_grid[0]) - 1
+#     for x in range(0, grid_maxx):
+#         for y in range(0, grid_maxy):
+#             grid_maxj = len(border_points_grid[x][y])
+#             for j in range(0, grid_maxj):
+#                 p = border_points_grid[x][y][j]
+#                 if p is not False:
+#
+#                     # current cell
+#                     for i in range(0, grid_maxj):
+#                         r = border_points_grid[x][y][i]
+#                         if r is False:
+#                             continue
+#                         if p.direction != r.direction:
+#                             segment = WG5Segment()
+#                             segment.start_x = p.x
+#                             segment.start_y = p.y
+#                             segment.end_x = r.x
+#                             segment.end_y = r.y
+#                             segments_list.append(segment)
+#                             segment_id = len(segments_list) - 1
+#                             if len(p.segment_ids) > 0:
+#                                 for p_s_id in p.segment_ids:
+#                                     if p_s_id != segment_id:
+#                                         segments_list[segment_id].start_segment_ids.append(p_s_id)
+#                                         segments_list[p_s_id].end_segment_ids.append(segment_id)
+#                                         border_points_grid[x][y][j].segment_ids.append(segment_id)
+#                             if len(r.segment_ids) > 0:
+#                                 for r_s_id in p.segment_ids:
+#                                     if r_s_id != segment_id:
+#                                         segments_list[segment_id].end_segment_ids.append(r_s_id)
+#                                         segments_list[r_s_id].start_segment_ids.append(segment_id)
+#                                         border_points_grid[x][y][i].segment_ids.append(segment_id)
+#
+#                     # right
+#                     if x < grid_maxx:
+#                         for i in range(0, len(border_points_grid[x + 1][y])):
+#                             r = border_points_grid[x + 1][y][i]
+#                             if r is False:
+#                                 continue
+#                             segment = WG5Segment()
+#                             segment.start_x = p.x
+#                             segment.start_y = p.y
+#                             segment.end_x = r.x
+#                             segment.end_y = r.y
+#                             segments_list.append(segment)
+#                             segment_id = len(segments_list) - 1
+#                             if len(p.segment_ids) > 0:
+#                                 for p_s_id in p.segment_ids:
+#                                     if p_s_id != segment_id:
+#                                         segments_list[segment_id].start_segment_ids.append(p_s_id)
+#                                         segments_list[p_s_id].end_segment_ids.append(segment_id)
+#                                         border_points_grid[x + 1][y][j].segment_ids.append(segment_id)
+#                             if len(r.segment_ids) > 0:
+#                                 for r_s_id in p.segment_ids:
+#                                     if r_s_id != segment_id:
+#                                         segments_list[segment_id].end_segment_ids.append(r_s_id)
+#                                         segments_list[r_s_id].start_segment_ids.append(segment_id)
+#                                         border_points_grid[x + 1][y][i].segment_ids.append(segment_id)
+#
+#                     # bottom-right
+#                     if y < grid_maxy and x < grid_maxx:
+#                         for i in range(0, len(border_points_grid[x + 1][y + 1])):
+#                             r = border_points_grid[x + 1][y + 1][i]
+#                             if r is False:
+#                                 continue
+#                             segment = WG5Segment()
+#                             segment.start_x = p.x
+#                             segment.start_y = p.y
+#                             segment.end_x = r.x
+#                             segment.end_y = r.y
+#                             segments_list.append(segment)
+#                             segment_id = len(segments_list) - 1
+#                             if len(p.segment_ids) > 0:
+#                                 for p_s_id in p.segment_ids:
+#                                     if p_s_id != segment_id:
+#                                         segments_list[segment_id].start_segment_ids.append(p_s_id)
+#                                         segments_list[p_s_id].end_segment_ids.append(segment_id)
+#                                         border_points_grid[x + 1][y + 1][j].segment_ids.append(segment_id)
+#                             if len(r.segment_ids) > 0:
+#                                 for r_s_id in p.segment_ids:
+#                                     if r_s_id != segment_id:
+#                                         segments_list[segment_id].end_segment_ids.append(r_s_id)
+#                                         segments_list[r_s_id].start_segment_ids.append(segment_id)
+#                                         border_points_grid[x + 1][y + 1][i].segment_ids.append(segment_id)
+#
+#                     # bottom
+#                     if y < grid_maxx:
+#                         for i in range(0, len(border_points_grid[x][y + 1])):
+#                             r = border_points_grid[x][y + 1][i]
+#                             if r is False:
+#                                 continue
+#                             segment = WG5Segment()
+#                             segment.start_x = p.x
+#                             segment.start_y = p.y
+#                             segment.end_x = r.x
+#                             segment.end_y = r.y
+#                             segments_list.append(segment)
+#                             segment_id = len(segments_list) - 1
+#                             if len(p.segment_ids) > 0:
+#                                 for p_s_id in p.segment_ids:
+#                                     if p_s_id != segment_id:
+#                                         segments_list[segment_id].start_segment_ids.append(p_s_id)
+#                                         segments_list[p_s_id].end_segment_ids.append(segment_id)
+#                                         border_points_grid[x][y + 1][j].segment_ids.append(segment_id)
+#                             if len(r.segment_ids) > 0:
+#                                 for r_s_id in p.segment_ids:
+#                                     if r_s_id != segment_id:
+#                                         segments_list[segment_id].end_segment_ids.append(r_s_id)
+#                                         segments_list[r_s_id].start_segment_ids.append(segment_id)
+#                                         border_points_grid[x][y + 1][i].segment_ids.append(segment_id)
+#
+#                     # bottom-left
+#                     if y < grid_maxx and x > 0:
+#                         for i in range(0, len(border_points_grid[x - 1][y + 1])):
+#                             r = border_points_grid[x - 1][y + 1][i]
+#                             if r is False:
+#                                 continue
+#                             segment = WG5Segment()
+#                             segment.start_x = p.x
+#                             segment.start_y = p.y
+#                             segment.end_x = r.x
+#                             segment.end_y = r.y
+#                             segments_list.append(segment)
+#                             segment_id = len(segments_list) - 1
+#                             if len(p.segment_ids) > 0:
+#                                 for p_s_id in p.segment_ids:
+#                                     if p_s_id != segment_id:
+#                                         segments_list[segment_id].start_segment_ids.append(p_s_id)
+#                                         segments_list[p_s_id].end_segment_ids.append(segment_id)
+#                                         border_points_grid[x - 1][y + 1][j].segment_ids.append(segment_id)
+#                             if len(r.segment_ids) > 0:
+#                                 for r_s_id in p.segment_ids:
+#                                     if r_s_id != segment_id:
+#                                         segments_list[segment_id].end_segment_ids.append(r_s_id)
+#                                         segments_list[r_s_id].start_segment_ids.append(segment_id)
+#                                         border_points_grid[x - 1][y + 1][i].segment_ids.append(segment_id)
+#
+#         # segments_grid_col = []
+#         # for y in range(0, bp_grid_maxy):
+#         #     segments_grid_cell = []
+#         #     if len(border_points_grid[x][y]) > 1:
+#         #         bp_cell_len = len(border_points_grid[x][y])
+#         #         for i in range(0, bp_cell_len - 1):
+#         #             if border_points_grid[x][y][i] is False or border_points_grid[x][y][i + 1] is False:
+#         #                 continue
+#         #             segment = WG5Segment()
+#         #             segment.start_x = border_points_grid[x][y][i].x
+#         #             segment.start_y = border_points_grid[x][y][i].y
+#         #             segment.end_x = border_points_grid[x][y][i + 1].x
+#         #             segment.end_y = border_points_grid[x][y][i + 1].y
+#         #             segment.end_cell_y = x
+#         #             segment.end_cell_y = y
+#         #             # direction ?
+#         #             # angle ?
+#         #             segments_grid_cell.append(segment)
+#         #
+#         #     for c in border_points_grid[x][y]:
+#         #         if c is False:
+#         #             continue
+#         #
+#         #         # right
+#         #         if c.direction != BORDER_TYPE_VERTICAL:
+#         #             for r in border_points_grid[x + 1][y]:
+#         #                 if r is False:
+#         #                     continue
+#         #                 if r.direction == c.direction:
+#         #                     segment = WG5Segment()
+#         #                     segment.start_x = c.x
+#         #                     segment.start_y = c.y
+#         #                     segment.end_x = r.x
+#         #                     segment.end_y = r.y
+#         #                     #segment.direction = SEGMENT_TYPE_HORIZONTAL
+#         #                     # angle ?
+#         #                     segment.end_cell_x = x + 1
+#         #                     segment.end_cell_y = y
+#         #                     segments_grid_cell.append(segment)
+#         #
+#         #         # bottom-right
+#         #         if c.direction != BORDER_TYPE_DIAGONAL_BLTR:
+#         #             for r in border_points_grid[x + 1][y + 1]:
+#         #                 if r is False:
+#         #                     continue
+#         #                 if r.direction == c.direction:
+#         #                     segment = WG5Segment()
+#         #                     segment.start_x = c.x
+#         #                     segment.start_y = c.y
+#         #                     segment.end_x = r.x
+#         #                     segment.end_y = r.y
+#         #                     #segment.direction = SEGMENT_TYPE_DIAGONAL_TLBR
+#         #                     segment.end_cell_x = x + 1
+#         #                     segment.end_cell_y = y + 1
+#         #                     segments_grid_cell.append(segment)
+#         #
+#         #         # bottom
+#         #         if c.direction != BORDER_TYPE_HORIZONTAL:
+#         #             for r in border_points_grid[x][y + 1]:
+#         #                 if r is False:
+#         #                     continue
+#         #                 if r.direction == c.direction:
+#         #                     segment = WG5Segment()
+#         #                     segment.start_x = c.x
+#         #                     segment.start_y = c.y
+#         #                     segment.end_x = r.x
+#         #                     segment.end_y = r.y
+#         #                     #segment.direction = SEGMENT_TYPE_VERTICAL
+#         #                     # angle ?
+#         #                     segment.end_cell_x = x
+#         #                     segment.end_cell_y = y + 1
+#         #                     segments_grid_cell.append(segment)
+#         #
+#         #         # bottom-left
+#         #         if c.direction != BORDER_TYPE_DIAGONAL_TLBR and y > 0:
+#         #             for r in border_points_grid[x + 1][y - 1]:
+#         #                 if r is False:
+#         #                     continue
+#         #                 if r.direction == c.direction:
+#         #                     segment = WG5Segment()
+#         #                     segment.start_x = c.x
+#         #                     segment.start_y = c.y
+#         #                     segment.end_x = r.x
+#         #                     segment.end_y = r.y
+#         #                     #segment.direction = SEGMENT_TYPE_DIAGONAL_BLTR
+#         #                     segment.end_cell_x = x + 1
+#         #                     segment.end_cell_y = y - 1
+#         #                     segments_grid_cell.append(segment)
+#         #
+#         #     segments_grid_col.append(segments_grid_cell)
+#         # segments_grid.append(segments_grid_col)
+#     return segments_list
 
 
 # def remove_double_borders(segments_list: list) -> list:
