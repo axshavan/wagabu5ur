@@ -44,7 +44,7 @@ wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
 
 # segments from the border points
 wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
-
+#print(wg5borders_grid)
 draw = ImageDraw.Draw(image)
 points_count = 0
 cells_count = 0

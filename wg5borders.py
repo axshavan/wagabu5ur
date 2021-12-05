@@ -70,8 +70,7 @@ def grid_gradients(grid: list) -> list:
                 grid[x][y].gradient_b = grid[x][y].pixel - grid[x][y + 1].pixel
                 if x < max_x:
                     grid[x][y].gradient_br = grid[x][y].pixel - grid[x + 1][y + 1].pixel
-                if x > 0:
-                    grid[x][y].gradient_bl = grid[x][y].pixel - grid[x - 1][y + 1].pixel
+                    grid[x][y].gradient_bl = grid[x + 1][y].pixel - grid[x][y + 1].pixel
             if x < max_x:
                 grid[x][y].gradient_r = grid[x][y].pixel - grid[x + 1][y].pixel
             y += 1
@@ -153,13 +152,13 @@ def border_points_from_grid(pixelmap: list, grid: list) -> list:
                 border_point.direction = BORDER_TYPE_DIAGONAL_TLBR
                 gradient_set = []
                 for i in range(0, GRID_STEP + 1):
-                    if node.x - i < 0:
+                    if node.x + GRID_STEP - i < 0:
                         break
-                    if node.y + i > pixelmap_maxy:
+                    if node.y + GRID_STEP + i > pixelmap_maxy:
                         break
-                    gradient_set.append(grayscale_from_rgb(pixelmap[node.x - i][node.y + i]))
+                    gradient_set.append(grayscale_from_rgb(pixelmap[node.x + GRID_STEP - i][node.y + i]))
                 i = get_gradient_middle(gradient_set)
-                border_point.x = node.x - i
+                border_point.x = node.x + GRID_STEP - i
                 border_point.y = node.y + i
                 border_points_cell.append(border_point)
 
@@ -190,7 +189,7 @@ def compress_border_points_grid(border_points_grid: list, side_length: int) -> l
 
 
 def reduce_border_points(border_points_grid: list) -> list:
-    border_points_grid = compress_border_points_grid(border_points_grid, 2)
+    #border_points_grid = compress_border_points_grid(border_points_grid, 2)
     grid_maxx = len(border_points_grid) - 1
     grid_maxy = len(border_points_grid[0]) - 1
     for x in range(0, grid_maxx):
@@ -323,10 +322,10 @@ def segments_from_border_points(border_points_grid: list) -> list:
 
                     if len(closest_points) > 0:
                         dist1 = 0
-                        dist2 = 0
+                        dist2 = 2 * GRID_STEP * GRID_STEP + 1
                         for i in closest_points:
                             dist1 = i[1] if i[1] < dist1 or dist1 == 0 else dist1
-                            dist2 = i[1] if (i[1] < dist1 < dist2) or dist2 == 0 else dist2
+                            dist2 = i[1] if dist1 < i[1] < dist2 else dist2
                         if dist1 > 2 * GRID_STEP * GRID_STEP:
                             dist1 = 0
                         if dist2 > 2 * GRID_STEP * GRID_STEP:
