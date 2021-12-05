@@ -223,7 +223,27 @@ def border_points_from_grid(pixelmap: list, grid: list) -> list:
     return border_points
 
 
+def compress_border_points_grid(border_points_grid: list, side_length: int) -> list:
+    result_grid = {}
+    grid_maxx = len(border_points_grid)
+    grid_maxy = len(border_points_grid[0])
+    for x in range(0, grid_maxx):
+        newx = int(x / side_length)
+        if newx not in result_grid:
+            result_grid[newx] = {}
+        for y in range(0, grid_maxy):
+            newy = int(y / side_length)
+            if newy not in result_grid[newx]:
+                result_grid[newx][newy] = []
+            for p in border_points_grid[x][y]:
+                result_grid[newx][newy].append(p)
+    for x in result_grid:
+        result_grid[x] = list(result_grid[x].values())
+    return list(result_grid.values())
+
+
 def reduce_border_points(border_points_grid: list) -> list:
+    border_points_grid = compress_border_points_grid(border_points_grid, 2)
     grid_maxx = len(border_points_grid) - 1
     grid_maxy = len(border_points_grid[0]) - 1
     for x in range(0, grid_maxx):
