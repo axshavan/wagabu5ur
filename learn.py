@@ -44,32 +44,50 @@ wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
 
 # segments from the border points
 wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
-#print(wg5borders_grid)
+
+# reduce linear segments
+wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
+
 draw = ImageDraw.Draw(image)
 points_count = 0
 cells_count = 0
-for col in wg5borders_grid:
-    for cell in col:
-        cells_count += 1
-        for point in cell:
-            if point is not False:
-                points_count += 1
-                color = (255, 0, 128)
-                image.putpixel((point.x * 4, point.y * 4), color)
-                image.putpixel((point.x * 4 + 1, point.y * 4), color)
-                image.putpixel((point.x * 4 + 1, point.y * 4 + 1), color)
-                image.putpixel((point.x * 4, point.y * 4 + 1), color)
-print(points_count)
+if True:
+    for col in wg5borders_grid:
+        for cell in col:
+            cells_count += 1
+            for point in cell:
+                if point is not False:
+                    points_count += 1
+                    color = (64, 255, 64)
+                    image.putpixel((point.x * 4, point.y * 4), color)
+                    image.putpixel((point.x * 4 + 1, point.y * 4), color)
+                    image.putpixel((point.x * 4 + 1, point.y * 4 + 1), color)
+                    image.putpixel((point.x * 4, point.y * 4 + 1), color)
+    print(points_count)
 
 # dump border segments to the picture
 if True:
     segments_count = 0
     draw = ImageDraw.Draw(image)
-    for segment in wg5borders_segments:
-        if segment is not False:
-            segments_count += 1
-            draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=(64, 128, 64))
-            #image.putpixel((segment.start_x * 4, segment.start_y * 4), (64, 255, 0))
-            #image.putpixel((segment.end_x * 4, segment.end_y * 4), (0, 64, 255))
+    for segment_col in wg5borders_segments:
+        for segment_cell in segment_col:
+            for segment in segment_cell:
+                if segment is not False:
+
+                    if (segment.start_x == segment.end_x and segment.start_y == segment.end_y):
+                        print('zero len segment')
+
+                    segments_count += 1
+                    draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4 - 4, segment.end_y * 4), fill=(100, 100, 100))
+                    color = (200, 0, 0)
+                    image.putpixel((segment.start_x * 4, segment.start_y * 4), color)
+                    image.putpixel((segment.start_x * 4 + 1, segment.start_y * 4), color)
+                    image.putpixel((segment.start_x * 4, segment.start_y * 4 + 1), color)
+                    image.putpixel((segment.start_x * 4 + 1, segment.start_y * 4 + 1), color)
+                    color = (0, 64, 200)
+                    image.putpixel((segment.end_x * 4 - 4, segment.end_y * 4), color)
+                    image.putpixel((segment.end_x * 4 - 3, segment.end_y * 4), color)
+                    image.putpixel((segment.end_x * 4 - 4, segment.end_y * 4 + 1), color)
+                    image.putpixel((segment.end_x * 4 - 3, segment.end_y * 4 + 1), color)
     print(segments_count)
 image.save('out.jpg', quality=95)

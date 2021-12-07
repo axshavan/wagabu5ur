@@ -14,6 +14,8 @@ SEGMENT_TYPE_DIAGONAL_BLTR = 2
 SEGMENT_TYPE_HORIZONTAL = 3
 SEGMENT_TYPE_DIAGONAL_TLBR = 4
 
+TAN_INFINITY = 10001.0
+TAN_THRESHOLD = 0.3
 
 class WG5GridNode:
     x = 0  # pixel x
@@ -36,6 +38,8 @@ class WG5Segment:
     start_y = 0  # pixel y
     end_x = 0  # pixel x
     end_y = 0  # pixel y
+    end_cell_x = 0  # cell x
+    end_cell_y = 0  # cell y
 
 
 def grayscale_from_rgb(pixel) -> float:
@@ -169,27 +173,7 @@ def border_points_from_grid(pixelmap: list, grid: list) -> list:
     return border_points
 
 
-def compress_border_points_grid(border_points_grid: list, side_length: int) -> list:
-    result_grid = {}
-    grid_maxx = len(border_points_grid)
-    grid_maxy = len(border_points_grid[0])
-    for x in range(0, grid_maxx):
-        newx = int(x / side_length)
-        if newx not in result_grid:
-            result_grid[newx] = {}
-        for y in range(0, grid_maxy):
-            newy = int(y / side_length)
-            if newy not in result_grid[newx]:
-                result_grid[newx][newy] = []
-            for p in border_points_grid[x][y]:
-                result_grid[newx][newy].append(p)
-    for x in result_grid:
-        result_grid[x] = list(result_grid[x].values())
-    return list(result_grid.values())
-
-
 def reduce_border_points(border_points_grid: list) -> list:
-    #border_points_grid = compress_border_points_grid(border_points_grid, 2)
     grid_maxx = len(border_points_grid) - 1
     grid_maxy = len(border_points_grid[0]) - 1
     for x in range(0, grid_maxx):
@@ -269,11 +253,13 @@ def reduce_border_points(border_points_grid: list) -> list:
 
 
 def segments_from_border_points(border_points_grid: list) -> list:
-    segments_list = []
+    segments_grid = []
     grid_maxx = len(border_points_grid) - 1
     grid_maxy = len(border_points_grid[0]) - 1
     for x in range(0, grid_maxx):
+        segments_col = []
         for y in range(0, grid_maxy):
+            segments_cell = []
             grid_maxj = len(border_points_grid[x][y])
             for j in range(0, grid_maxj):
                 p = border_points_grid[x][y][j]
@@ -285,8 +271,8 @@ def segments_from_border_points(border_points_grid: list) -> list:
                         r = border_points_grid[x][y][i]
                         if r is False:
                             continue
-                        if p.direction != r.direction:
-                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y)])
+                        if p.direction != r.direction and (p.x != r.x or p.y != r.y):
+                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y), x, y])
 
                     # right
                     if x < grid_maxx:
@@ -294,7 +280,8 @@ def segments_from_border_points(border_points_grid: list) -> list:
                             r = border_points_grid[x + 1][y][i]
                             if r is False:
                                 continue
-                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y)])
+                            if p.x != r.x or p.y != r.y:
+                                closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y), x + 1, y])
 
                     # bottom-right
                     if y < grid_maxy and x < grid_maxx:
@@ -302,7 +289,8 @@ def segments_from_border_points(border_points_grid: list) -> list:
                             r = border_points_grid[x + 1][y + 1][i]
                             if r is False:
                                 continue
-                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y)])
+                            if p.x != r.x or p.y != r.y:
+                                closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y), x + 1, y + 1])
 
                     # bottom
                     if y < grid_maxx:
@@ -310,7 +298,8 @@ def segments_from_border_points(border_points_grid: list) -> list:
                             r = border_points_grid[x][y + 1][i]
                             if r is False:
                                 continue
-                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y)])
+                            if p.x != r.x or p.y != r.y:
+                                closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y), x, y + 1])
 
                     # bottom-left
                     if y < grid_maxx and x > 0:
@@ -318,12 +307,15 @@ def segments_from_border_points(border_points_grid: list) -> list:
                             r = border_points_grid[x - 1][y + 1][i]
                             if r is False:
                                 continue
-                            closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y)])
+                            if p.x != r.x or p.y != r.y:
+                                closest_points.append([r, (p.x - r.x) * (p.x - r.x) + (p.y - r.y) * (p.y - r.y), x - 1, y + 1])
 
                     if len(closest_points) > 0:
                         dist1 = 0
                         dist2 = 2 * GRID_STEP * GRID_STEP + 1
                         for i in closest_points:
+                            if i[1] == 0:
+                                continue
                             dist1 = i[1] if i[1] < dist1 or dist1 == 0 else dist1
                             dist2 = i[1] if dist1 < i[1] < dist2 else dist2
                         if dist1 > 2 * GRID_STEP * GRID_STEP:
@@ -331,11 +323,75 @@ def segments_from_border_points(border_points_grid: list) -> list:
                         if dist2 > 2 * GRID_STEP * GRID_STEP:
                             dist2 = 0
                         for i in closest_points:
+                            if i[1] == 0:
+                                continue
                             if i[1] == dist1 or i[1] == dist2:
                                 segment = WG5Segment()
                                 segment.start_x = p.x
                                 segment.start_y = p.y
                                 segment.end_x = i[0].x
                                 segment.end_y = i[0].y
-                                segments_list.append(segment)
-    return segments_list
+                                segment.end_cell_x = i[2]
+                                segment.end_cell_y = i[3]
+                                segments_cell.append(segment)
+            segments_col.append(segments_cell)
+        segments_grid.append(segments_col)
+    return segments_grid
+
+
+def reduce_linear_segments_recursive(current_segment: WG5Segment, segments_grid: list) -> list:
+    cell_x = current_segment.end_cell_x
+    cell_y = current_segment.end_cell_y
+    if current_segment.start_y == current_segment.end_y:
+        cur_tg = TAN_INFINITY
+    else:
+        cur_tg = (current_segment.start_x - current_segment.end_x) / (current_segment.start_y - current_segment.end_y)
+    if current_segment.start_x == current_segment.end_x:
+        cur_ctg = TAN_INFINITY
+    else:
+        cur_ctg = (current_segment.start_y - current_segment.end_y) / (current_segment.start_x - current_segment.end_x)
+    for z in range(0, len(segments_grid[cell_x][cell_y])):
+        reduce_segment = False
+        if segments_grid[cell_x][cell_y][z] is not False:
+            r = segments_grid[cell_x][cell_y][z]
+            if (
+                    current_segment.start_x == r.start_x and
+                    current_segment.start_y == r.start_y and
+                    current_segment.end_x == r.end_x and
+                    current_segment.end_y == r.end_y):
+                continue
+            if r.start_y == r.end_y:
+                r_tg = TAN_INFINITY
+            else:
+                r_tg = (r.start_x - r.end_x) / (r.start_y - r.end_y)
+            if r.start_x == r.end_x:
+                r_ctg = TAN_INFINITY
+            else:
+                r_ctg = (r.start_y - r.end_y) / (r.start_x - r.end_x)
+            if (cur_tg == -r_tg and cur_tg != 0) or (cur_ctg == -r_ctg and cur_ctg != 0):
+                segments_grid[cell_x][cell_y][z] = False
+                continue
+            if -1 <= cur_tg <= 1:  # +45 deg ... -45 deg or 135 deg ... -135 deg
+                if cur_tg == r_tg or abs((cur_tg - r_tg) / (cur_tg + r_tg)) < TAN_THRESHOLD:
+                    reduce_segment = True
+            elif -1 <= cur_ctg <= 1:  # -45 deg ... -135 deg or 45 deg ... 135 deg
+                if cur_ctg == r_ctg or abs((cur_ctg - r_ctg) / (cur_ctg + r_ctg)) < TAN_THRESHOLD:
+                    reduce_segment = True
+        if reduce_segment is True:
+            if current_segment.start_x != segments_grid[cell_x][cell_y][z].end_x or current_segment.start_y != segments_grid[cell_x][cell_y][z].end_y:
+                current_segment.end_x = segments_grid[cell_x][cell_y][z].end_x
+                current_segment.end_y = segments_grid[cell_x][cell_y][z].end_y
+                current_segment.end_cell_x = segments_grid[cell_x][cell_y][z].end_cell_x
+                current_segment.end_cell_y = segments_grid[cell_x][cell_y][z].end_cell_y
+                segments_grid[cell_x][cell_y][z] = False
+                current_segment, segments_list = reduce_linear_segments_recursive(current_segment, segments_grid)
+    return [current_segment, segments_grid]
+
+
+def reduce_linear_segments(segments_grid: list) -> list:
+    for x in range(0, len(segments_grid)):
+        for y in range(0, len(segments_grid[0])):
+            for s in segments_grid[x][y]:
+                if s is not False:
+                    s, segments_grid = reduce_linear_segments_recursive(s, segments_grid)
+    return segments_grid
