@@ -74,8 +74,8 @@ if True:
             for segment in segment_cell:
                 if segment is not False:
 
-                    if (segment.start_x == segment.end_x and segment.start_y == segment.end_y):
-                        print('zero len segment')
+                    # if (segment.start_x == segment.end_x and segment.start_y == segment.end_y):
+                    #     print('zero len segment')
 
                     segments_count += 1
                     draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4 - 4, segment.end_y * 4), fill=(100, 100, 100))

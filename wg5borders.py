@@ -317,6 +317,7 @@ def segments_from_border_points(border_points_grid: list) -> list:
                             if i[1] == 0:
                                 continue
                             dist1 = i[1] if i[1] < dist1 or dist1 == 0 else dist1
+                        for i in closest_points:
                             dist2 = i[1] if dist1 < i[1] < dist2 else dist2
                         if dist1 > 2 * GRID_STEP * GRID_STEP:
                             dist1 = 0
@@ -369,7 +370,6 @@ def reduce_linear_segments_recursive(current_segment: WG5Segment, segments_grid:
             else:
                 r_ctg = (r.start_y - r.end_y) / (r.start_x - r.end_x)
             if (cur_tg == -r_tg and cur_tg != 0) or (cur_ctg == -r_ctg and cur_ctg != 0):
-                segments_grid[cell_x][cell_y][z] = False
                 continue
             if -1 <= cur_tg <= 1:  # +45 deg ... -45 deg or 135 deg ... -135 deg
                 if cur_tg == r_tg or abs((cur_tg - r_tg) / (cur_tg + r_tg)) < TAN_THRESHOLD:
@@ -395,3 +395,5 @@ def reduce_linear_segments(segments_grid: list) -> list:
                 if s is not False:
                     s, segments_grid = reduce_linear_segments_recursive(s, segments_grid)
     return segments_grid
+
+
