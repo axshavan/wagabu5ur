@@ -48,6 +48,9 @@ wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
 # reduce linear segments
 wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
 
+# make lines
+wg5borders_lines = wg5borders.lines_from_segments(wg5borders_segments)
+
 draw = ImageDraw.Draw(image)
 points_count = 0
 cells_count = 0
@@ -73,10 +76,6 @@ if True:
         for segment_cell in segment_col:
             for segment in segment_cell:
                 if segment is not False:
-
-                    # if (segment.start_x == segment.end_x and segment.start_y == segment.end_y):
-                    #     print('zero len segment')
-
                     segments_count += 1
                     draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4 - 4, segment.end_y * 4), fill=(100, 100, 100))
                     color = (200, 0, 0)

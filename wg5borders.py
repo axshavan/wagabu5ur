@@ -42,6 +42,11 @@ class WG5Segment:
     end_cell_y = 0  # cell y
 
 
+#class WG5LineSegment:
+
+#class WG5Line:
+
+
 def grayscale_from_rgb(pixel) -> float:
     return (pixel[0] + pixel[1] + pixel[2]) / 3
 
@@ -397,3 +402,18 @@ def reduce_linear_segments(segments_grid: list) -> list:
     return segments_grid
 
 
+def lines_from_segments(segments_grid: list) -> list:
+    lines_grid = []
+    grid_maxx = len(segments_grid) - 1
+    grid_maxy = len(segments_grid[0]) - 1
+    for x in range(0, grid_maxx):
+        lines_col = []
+        for y in range(0, grid_maxy):
+            lines_cell = []
+            grid_maxs = len(segments_grid[x][y])
+            for s in range(0, grid_maxs):
+                if s is not False:
+                    pass # todo
+            lines_col.append(lines_cell)
+        lines_grid.append(lines_col)
+    return lines_grid
