@@ -15,7 +15,10 @@ SEGMENT_TYPE_HORIZONTAL = 3
 SEGMENT_TYPE_DIAGONAL_TLBR = 4
 
 TAN_INFINITY = 10001.0
-TAN_THRESHOLD = 0.3
+TAN_THRESHOLD = 0.3  # threshold of the tan(angle) to merge the segments
+
+global_line_segments_counter = 0
+
 
 class WG5GridNode:
     x = 0  # pixel x
@@ -42,9 +45,75 @@ class WG5Segment:
     end_cell_y = 0  # cell y
 
 
-#class WG5LineSegment:
+class WG5LineSegment(WG5Segment):
+    id = 0
 
-#class WG5Line:
+    def __init__(self, id=0):
+        self.start_segment = False
+        self.end_segments = []
+        self.id = id
+
+    def __eq__(self, other):
+        if self.id != 0 and self.id == other.id:
+            return True
+        if (
+                self.start_x == other.start_x and
+                self.start_y == other.start_y and
+                self.end_x == other.end_x and
+                self.end_y == other.end_y):
+            return True
+        if (
+                self.start_x == other.end_x and
+                self.start_y == other.end_y and
+                self.end_x == other.start_x and
+                self.end_y == other.start_y):
+            return True
+        return False
+
+    # def attach_to_start_segment(self, segment): todo
+    #     self.start_segment = segment
+    #     segment.end_segments.append(self)
+    #
+    # def attach_end_segment(self, segment):
+    #     segment.start_segment = self
+    #     self.end_segments.append(segment)
+
+    def init_from_segment(self, segment: WG5Segment):
+        self.start_x = segment.start_x
+        self.start_y = segment.start_y
+        self.end_x = segment.end_x
+        self.end_y = segment.end_y
+        self.end_cell_x = segment.end_cell_x
+        self.end_cell_y = segment.end_cell_y
+
+
+class WG5Line:
+    def __init__(self):
+        self.segments = []
+        #self.first_segment = False todo
+        #self.last_segment = False  # for internal use only
+
+    def attach_segment(self, segment: WG5LineSegment) -> bool:
+        add_segment_to_line = len(self.segments) == 0
+        for s in self.segments:
+            if s == segment:
+                return False
+            if (
+                    (s.start_x == segment.start_x and s.start_y == segment.start_y) or
+                    (s.end_x == segment.end_x and s.end_y == segment.end_y) or
+                    (s.start_x == segment.end_x and s.start_y == segment.end_y) or
+                    (s.end_x == segment.start_x and s.end_y == segment.start_y) or True
+            ):
+                add_segment_to_line = True
+        if add_segment_to_line is False:
+            return False
+        self.segments.append(segment)
+        #if self.first_segment is False: todo
+        #    self.first_segment = segment
+        #if self.last_segment is not False:
+        #    self.last_segment.attach_end_segment(segment)
+        #self.last_segment = segment
+        return True
 
 
 def grayscale_from_rgb(pixel) -> float:
@@ -179,6 +248,7 @@ def border_points_from_grid(pixelmap: list, grid: list) -> list:
 
 
 def reduce_border_points(border_points_grid: list) -> list:
+    global BORDER_POINTS_MERGE_THRESHOLD
     grid_maxx = len(border_points_grid) - 1
     grid_maxy = len(border_points_grid[0]) - 1
     for x in range(0, grid_maxx):
@@ -254,6 +324,7 @@ def reduce_border_points(border_points_grid: list) -> list:
                                 border_points_grid[x - 1][y + 1][i] = False
 
                     border_points_grid[x][y][j] = p
+    BORDER_POINTS_MERGE_THRESHOLD -= 1
     return border_points_grid
 
 
@@ -402,6 +473,25 @@ def reduce_linear_segments(segments_grid: list) -> list:
     return segments_grid
 
 
+def attach_segment_to_line_recursive(segments_grid: list, line: WG5Line, current_segment: WG5Segment) -> list:
+    global global_line_segments_counter
+    global_line_segments_counter += 1
+    segment = WG5LineSegment(global_line_segments_counter)
+    segment.init_from_segment(current_segment)
+    if line.attach_segment(segment) is False:
+        return
+    grid_maxs = len(segments_grid[segment.end_cell_x][segment.end_cell_y])
+    for s in range(0, grid_maxs):
+        if segments_grid[segment.end_cell_x][segment.end_cell_y][s] is not False:
+            attach_segment_to_line_recursive(
+                segments_grid,
+                line,
+                segments_grid[segment.end_cell_x][segment.end_cell_y][s]
+            )
+            segments_grid[segment.end_cell_x][segment.end_cell_y][s] = False
+    return segments_grid
+
+
 def lines_from_segments(segments_grid: list) -> list:
     lines_grid = []
     grid_maxx = len(segments_grid) - 1
@@ -412,8 +502,11 @@ def lines_from_segments(segments_grid: list) -> list:
             lines_cell = []
             grid_maxs = len(segments_grid[x][y])
             for s in range(0, grid_maxs):
-                if s is not False:
-                    pass # todo
+                if segments_grid[x][y][s] is not False:
+                    line = WG5Line()
+                    segments_grid = attach_segment_to_line_recursive(segments_grid, line, segments_grid[x][y][s])
+                    segments_grid[x][y][s] = False
+                    lines_cell.append(line)
             lines_col.append(lines_cell)
         lines_grid.append(lines_col)
     return lines_grid

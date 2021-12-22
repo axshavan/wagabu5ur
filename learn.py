@@ -41,6 +41,7 @@ wg5borders_grid = wg5borders.border_points_from_grid(pixelmap, wg5borders_grid)
 
 # reduce the number of border points
 wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
+wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
 
 # segments from the border points
 wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
@@ -69,7 +70,7 @@ if True:
     print(points_count)
 
 # dump border segments to the picture
-if True:
+if False:
     segments_count = 0
     draw = ImageDraw.Draw(image)
     for segment_col in wg5borders_segments:
@@ -89,4 +90,29 @@ if True:
                     image.putpixel((segment.end_x * 4 - 4, segment.end_y * 4 + 1), color)
                     image.putpixel((segment.end_x * 4 - 3, segment.end_y * 4 + 1), color)
     print(segments_count)
+
+# dump segment lines to the picture
+if True:
+    lines_count = 0
+    line_segments_count = 0
+    draw = ImageDraw.Draw(image)
+    for lines_col in wg5borders_lines:
+        for lines_cell in lines_col:
+            for line in lines_cell:
+                lines_count += 1
+                if lines_count > 0:
+                    for segment in line.segments:
+                        line_segments_count += 1
+                        draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=(60, 200, 60))
+                        color = (40, 40, 40)
+                        image.putpixel((segment.start_x * 4, segment.start_y * 4), color)
+                        image.putpixel((segment.start_x * 4 + 1, segment.start_y * 4), color)
+                        image.putpixel((segment.start_x * 4, segment.start_y * 4 + 1), color)
+                        image.putpixel((segment.start_x * 4 + 1, segment.start_y * 4 + 1), color)
+                        color = (200, 60, 60)
+                        image.putpixel((segment.end_x * 4, segment.end_y * 4), color)
+                        image.putpixel((segment.end_x * 4 + 1, segment.end_y * 4), color)
+                        image.putpixel((segment.end_x * 4, segment.end_y * 4 + 1), color)
+                        image.putpixel((segment.end_x * 4 + 1, segment.end_y * 4 + 1), color)
+    print(lines_count, line_segments_count)
 image.save('out.jpg', quality=95)
