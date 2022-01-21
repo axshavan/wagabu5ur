@@ -2,6 +2,8 @@
 import sys
 from PIL import Image, ImageDraw
 import wg5borders
+import random
+
 
 if len(sys.argv) < 2:
     print("Usage: learn.py <image>")
@@ -41,44 +43,52 @@ wg5borders_grid = wg5borders.border_points_from_grid(pixelmap, wg5borders_grid)
 
 # reduce the number of border points
 wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
-wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
+#wg5borders.BORDER_POINTS_MERGE_THRESHOLD -= 1
+#wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
 
 # segments from the border points
-wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
+#wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
 
 # reduce linear segments
-wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
+# wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
 
 # make lines
-wg5borders_lines = wg5borders.lines_from_segments(wg5borders_segments)
+#wg5borders_lines = wg5borders.lines_from_segments(wg5borders_segments)
 
 draw = ImageDraw.Draw(image)
-points_count = 0
-cells_count = 0
 if True:
+    points_count = 0
+    cols_count = 0
     for col in wg5borders_grid:
+        cells_count = 0
         for cell in col:
-            cells_count += 1
             for point in cell:
                 if point is not False:
                     points_count += 1
-                    color = (64, 255, 64)
+                    color = (64, 180, 64)
                     image.putpixel((point.x * 4, point.y * 4), color)
                     image.putpixel((point.x * 4 + 1, point.y * 4), color)
                     image.putpixel((point.x * 4 + 1, point.y * 4 + 1), color)
                     image.putpixel((point.x * 4, point.y * 4 + 1), color)
-    print(points_count)
+                    draw.line((point.x * 4, point.y * 4, cols_count * 32, cells_count * 32), fill=(200, 255, 200))
+            cells_count += 1
+        cols_count += 1
 
 # dump border segments to the picture
 if False:
     segments_count = 0
     draw = ImageDraw.Draw(image)
+    segment_col_counter = 0
     for segment_col in wg5borders_segments:
+        segment_col_counter += 1
+        segment_cell_counter = 0
         for segment_cell in segment_col:
+            segment_cell_counter += 1
             for segment in segment_cell:
                 if segment is not False:
                     segments_count += 1
                     draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4 - 4, segment.end_y * 4), fill=(100, 100, 100))
+                    draw.line((segment.start_x * 4, segment.start_y * 4, segment_col_counter * 32, segment_cell_counter * 32), fill=(200, 200, 200))
                     color = (200, 0, 0)
                     image.putpixel((segment.start_x * 4, segment.start_y * 4), color)
                     image.putpixel((segment.start_x * 4 + 1, segment.start_y * 4), color)
@@ -92,18 +102,19 @@ if False:
     print(segments_count)
 
 # dump segment lines to the picture
-if True:
+if False:
     lines_count = 0
     line_segments_count = 0
     draw = ImageDraw.Draw(image)
     for lines_col in wg5borders_lines:
         for lines_cell in lines_col:
             for line in lines_cell:
+                random_color = (random.randrange(0, 200), random.randrange(0, 200), random.randrange(0, 200))
                 lines_count += 1
                 if lines_count > 0:
                     for segment in line.segments:
                         line_segments_count += 1
-                        draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=(60, 200, 60))
+                        draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=random_color)
                         color = (40, 40, 40)
                         image.putpixel((segment.start_x * 4, segment.start_y * 4), color)
                         image.putpixel((segment.start_x * 4 + 1, segment.start_y * 4), color)

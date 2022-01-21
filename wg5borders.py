@@ -36,6 +36,64 @@ class WG5BorderPoint:
     direction = 0
 
 
+class Grid:
+    cell_size = GRID_STEP  # cell width/length in pixels
+    iter_col = 0  # internal iterator index
+
+    def __init__(self, cell_size=GRID_STEP):
+        self.cell_size = GRID_STEP
+        self.data = []
+
+    def __iter__(self):
+        self.iter_col = 0
+        return self
+
+    def __next__(self):
+        self.iter_col += 1
+        if self.iter_col > len(self.data):
+            raise StopIteration
+        return self.data[self.iter_col - 1]
+
+    def __getitem__(self, item):
+        return self.data[item]
+
+    def start_new_column(self):
+        self.data.append([])
+
+    def append_cell(self, cell):
+        data_cols_len = len(self.data)
+        if data_cols_len < 1:
+            self.start_new_column()
+            data_cols_len = 1
+        self.data[data_cols_len - 1].append(cell)
+
+    def set(self, x, y, j=-1, value = False) -> bool:
+        if 0 <= x < len(self.data):
+            if 0 <= y < len(self.data[x]):
+                if j == -1:
+                    self.data[x][y] = value
+                    return True
+                elif 0 <= j < len(self.data[x][y]):
+                    self.data[x][y][j] = value
+                    return True
+        # some index is out of range
+        return False
+
+    def len_x(self) -> int:
+        return len(self.data)
+
+    def len_y(self) -> int:
+        return len(self.data[0]) if self.len_x() > 0 else 0
+
+    def init_empty_3dim(self, size_x, size_y):  # init empty 3-dimensional array size_x * size_y * 1
+        self.data = []
+        for x in range(0, size_x):
+            col = []
+            for y in range(0, size_y):
+                col.append([])
+            self.data.append(col)
+
+
 class WG5Segment:
     start_x = 0  # pixel x
     start_y = 0  # pixel y
@@ -43,6 +101,21 @@ class WG5Segment:
     end_y = 0  # pixel y
     end_cell_x = 0  # cell x
     end_cell_y = 0  # cell y
+
+    def __eq__(self, other):
+        if (
+                self.start_x == other.start_x and
+                self.start_y == other.start_y and
+                self.end_x == other.end_x and
+                self.end_y == other.end_y):
+            return True
+        if (
+                self.start_x == other.end_x and
+                self.start_y == other.end_y and
+                self.end_x == other.start_x and
+                self.end_y == other.start_y):
+            return True
+        return False
 
 
 class WG5LineSegment(WG5Segment):
@@ -120,36 +193,35 @@ def grayscale_from_rgb(pixel) -> float:
     return (pixel[0] + pixel[1] + pixel[2]) / 3
 
 
-def grid(pixelmap) -> list:
-    grid = []
+def grid(pixelmap) -> Grid:
+    result = Grid()
     for x in range(0, len(pixelmap)):
         if x % GRID_STEP == 0:
             y = 0
-            grid_col = []
+            result.start_new_column()
             for pixel in pixelmap[x]:
                 if y % GRID_STEP == 0:
                     grid_node = WG5GridNode()
                     grid_node.x = x
                     grid_node.y = y
                     grid_node.pixel = grayscale_from_rgb(pixel)
-                    grid_col.append(grid_node)
+                    result.append_cell(grid_node)
                 y += 1
-            grid.append(grid_col)
         x += 1
-    return grid
+    return result
 
 
-def grid_gradients(grid: list) -> list:
-    max_x = len(grid) - 1
-    max_y = len(grid[max_x]) - 1
-    for x in range(0, max_x + 1):
-        for y in range(0, max_y + 1):
-            if y < max_y:
+def grid_gradients(grid: Grid) -> Grid:
+    grid_maxx = grid.len_x() - 1
+    grid_maxy = grid.len_y() - 1
+    for x in range(0, grid_maxx + 1):
+        for y in range(0, grid_maxy + 1):
+            if y < grid_maxy:
                 grid[x][y].gradient_b = grid[x][y].pixel - grid[x][y + 1].pixel
-                if x < max_x:
+                if x < grid_maxx:
                     grid[x][y].gradient_br = grid[x][y].pixel - grid[x + 1][y + 1].pixel
                     grid[x][y].gradient_bl = grid[x + 1][y].pixel - grid[x][y + 1].pixel
-            if x < max_x:
+            if x < grid_maxx:
                 grid[x][y].gradient_r = grid[x][y].pixel - grid[x + 1][y].pixel
             y += 1
         x += 1
@@ -169,16 +241,16 @@ def get_gradient_middle(gradient_set: list) -> int:
     return 0
 
 
-def border_points_from_grid(pixelmap: list, grid: list) -> list:
-    border_points = []
+def border_points_from_grid(pixelmap: list, grid: Grid) -> Grid:
+    result = Grid()
     x = 0
     pixelmap_maxx = len(pixelmap) - 1
     pixelmap_maxy = len(pixelmap[pixelmap_maxx]) - 1
     for col in grid:
-        border_points_col = []
+        result.start_new_column()
         y = 0
         for node in col:
-            border_points_cell = []
+            result_cell = []
 
             # right
             if abs(node.gradient_r) > BORDER_THRESHOLD:
@@ -192,7 +264,7 @@ def border_points_from_grid(pixelmap: list, grid: list) -> list:
                 i = get_gradient_middle(gradient_set)
                 border_point.x = node.x + i
                 border_point.y = node.y
-                border_points_cell.append(border_point)
+                result_cell.append(border_point)
 
             # bottom-right
             if abs(node.gradient_br) > BORDER_THRESHOLD:
@@ -208,7 +280,7 @@ def border_points_from_grid(pixelmap: list, grid: list) -> list:
                 i = get_gradient_middle(gradient_set)
                 border_point.x = node.x + i
                 border_point.y = node.y + i
-                border_points_cell.append(border_point)
+                result_cell.append(border_point)
 
             # bottom
             if abs(node.gradient_b) > BORDER_THRESHOLD:
@@ -222,7 +294,7 @@ def border_points_from_grid(pixelmap: list, grid: list) -> list:
                 i = get_gradient_middle(gradient_set)
                 border_point.x = node.x
                 border_point.y = node.y + i
-                border_points_cell.append(border_point)
+                result_cell.append(border_point)
 
             # bottom-left
             if abs(node.gradient_bl) > BORDER_THRESHOLD:
@@ -238,19 +310,35 @@ def border_points_from_grid(pixelmap: list, grid: list) -> list:
                 i = get_gradient_middle(gradient_set)
                 border_point.x = node.x + GRID_STEP - i
                 border_point.y = node.y + i
-                border_points_cell.append(border_point)
+                result_cell.append(border_point)
 
-            border_points_col.append(border_points_cell)
+            result.append_cell(result_cell)
             y += 1
-        border_points.append(border_points_col)
         x += 1
-    return border_points
+    return result
 
 
-def reduce_border_points(border_points_grid: list) -> list:
+def remap_grid_after_reduce_border_points(border_points_grid: Grid) -> Grid:
+    result = Grid()
+    grid_maxx = border_points_grid.len_x()
+    grid_maxy = border_points_grid.len_y()
+    result.init_empty_3dim(grid_maxx, grid_maxy)
+    grid_maxx -= 1
+    grid_maxy -= 1
+
+    # for x in range(0, grid_maxx):
+    #     for y in range(0, grid_maxy):
+    #         grid_maxj = len(border_points_grid[x][y])
+    #         for j in range(0, grid_maxj):
+    #             print(border_points_grid[x][y][j])
+    #             exit()
+    return result
+
+
+def reduce_border_points(border_points_grid: Grid) -> Grid:
     global BORDER_POINTS_MERGE_THRESHOLD
-    grid_maxx = len(border_points_grid) - 1
-    grid_maxy = len(border_points_grid[0]) - 1
+    grid_maxx = border_points_grid.len_x() - 1
+    grid_maxy = border_points_grid.len_y() - 1
     for x in range(0, grid_maxx):
         for y in range(0, grid_maxy):
             grid_maxj = len(border_points_grid[x][y])
@@ -324,8 +412,7 @@ def reduce_border_points(border_points_grid: list) -> list:
                                 border_points_grid[x - 1][y + 1][i] = False
 
                     border_points_grid[x][y][j] = p
-    BORDER_POINTS_MERGE_THRESHOLD -= 1
-    return border_points_grid
+    return remap_grid_after_reduce_border_points(border_points_grid)
 
 
 def segments_from_border_points(border_points_grid: list) -> list:
