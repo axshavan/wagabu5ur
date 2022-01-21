@@ -47,16 +47,18 @@ wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
 #wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
 
 # segments from the border points
-#wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
+wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
 
 # reduce linear segments
-# wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
+wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
 
 # make lines
 #wg5borders_lines = wg5borders.lines_from_segments(wg5borders_segments)
 
 draw = ImageDraw.Draw(image)
-if True:
+
+# dump border points to the picture
+if False:
     points_count = 0
     cols_count = 0
     for col in wg5borders_grid:
@@ -73,17 +75,15 @@ if True:
                     draw.line((point.x * 4, point.y * 4, cols_count * 32, cells_count * 32), fill=(200, 255, 200))
             cells_count += 1
         cols_count += 1
+    print('border point count', points_count)
 
 # dump border segments to the picture
-if False:
+if True:
     segments_count = 0
-    draw = ImageDraw.Draw(image)
     segment_col_counter = 0
     for segment_col in wg5borders_segments:
-        segment_col_counter += 1
         segment_cell_counter = 0
         for segment_cell in segment_col:
-            segment_cell_counter += 1
             for segment in segment_cell:
                 if segment is not False:
                     segments_count += 1
@@ -99,7 +99,9 @@ if False:
                     image.putpixel((segment.end_x * 4 - 3, segment.end_y * 4), color)
                     image.putpixel((segment.end_x * 4 - 4, segment.end_y * 4 + 1), color)
                     image.putpixel((segment.end_x * 4 - 3, segment.end_y * 4 + 1), color)
-    print(segments_count)
+            segment_cell_counter += 1
+        segment_col_counter += 1
+    print('segments count', segments_count)
 
 # dump segment lines to the picture
 if False:

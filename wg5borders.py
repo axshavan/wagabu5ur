@@ -15,7 +15,7 @@ SEGMENT_TYPE_HORIZONTAL = 3
 SEGMENT_TYPE_DIAGONAL_TLBR = 4
 
 TAN_INFINITY = 10001.0
-TAN_THRESHOLD = 0.3  # threshold of the tan(angle) to merge the segments
+TAN_THRESHOLD = 0.4  # threshold of the tan(angle) to merge the segments
 
 global_line_segments_counter = 0
 
@@ -67,15 +67,10 @@ class Grid:
             data_cols_len = 1
         self.data[data_cols_len - 1].append(cell)
 
-    def set(self, x, y, j=-1, value = False) -> bool:
+    def append_to_cell(self, x, y, value) -> bool:
         if 0 <= x < len(self.data):
             if 0 <= y < len(self.data[x]):
-                if j == -1:
-                    self.data[x][y] = value
-                    return True
-                elif 0 <= j < len(self.data[x][y]):
-                    self.data[x][y][j] = value
-                    return True
+                self.data[x][y].append(value)
         # some index is out of range
         return False
 
@@ -319,19 +314,17 @@ def border_points_from_grid(pixelmap: list, grid: Grid) -> Grid:
 
 
 def remap_grid_after_reduce_border_points(border_points_grid: Grid) -> Grid:
-    result = Grid()
+    result = Grid(border_points_grid.cell_size)
     grid_maxx = border_points_grid.len_x()
     grid_maxy = border_points_grid.len_y()
     result.init_empty_3dim(grid_maxx, grid_maxy)
     grid_maxx -= 1
     grid_maxy -= 1
-
-    # for x in range(0, grid_maxx):
-    #     for y in range(0, grid_maxy):
-    #         grid_maxj = len(border_points_grid[x][y])
-    #         for j in range(0, grid_maxj):
-    #             print(border_points_grid[x][y][j])
-    #             exit()
+    for x in range(0, grid_maxx):
+        for y in range(0, grid_maxy):
+            for j in border_points_grid[x][y]:
+                if j is not False:
+                    result.append_to_cell(int(j.x // result.cell_size), int(j.y // result.cell_size), j)
     return result
 
 
@@ -415,14 +408,14 @@ def reduce_border_points(border_points_grid: Grid) -> Grid:
     return remap_grid_after_reduce_border_points(border_points_grid)
 
 
-def segments_from_border_points(border_points_grid: list) -> list:
-    segments_grid = []
-    grid_maxx = len(border_points_grid) - 1
-    grid_maxy = len(border_points_grid[0]) - 1
+def segments_from_border_points(border_points_grid: Grid) -> Grid:
+    result = Grid()
+    grid_maxx = border_points_grid.len_x() - 1
+    grid_maxy = border_points_grid.len_y() - 1
     for x in range(0, grid_maxx):
-        segments_col = []
+        result.start_new_column()
         for y in range(0, grid_maxy):
-            segments_cell = []
+            result_cell = []
             grid_maxj = len(border_points_grid[x][y])
             for j in range(0, grid_maxj):
                 p = border_points_grid[x][y][j]
@@ -482,9 +475,9 @@ def segments_from_border_points(border_points_grid: list) -> list:
                             dist1 = i[1] if i[1] < dist1 or dist1 == 0 else dist1
                         for i in closest_points:
                             dist2 = i[1] if dist1 < i[1] < dist2 else dist2
-                        if dist1 > 2 * GRID_STEP * GRID_STEP:
+                        if dist1 > 2.5 * GRID_STEP * GRID_STEP:
                             dist1 = 0
-                        if dist2 > 2 * GRID_STEP * GRID_STEP:
+                        if dist2 > 2.5 * GRID_STEP * GRID_STEP:
                             dist2 = 0
                         for i in closest_points:
                             if i[1] == 0:
@@ -497,13 +490,13 @@ def segments_from_border_points(border_points_grid: list) -> list:
                                 segment.end_y = i[0].y
                                 segment.end_cell_x = i[2]
                                 segment.end_cell_y = i[3]
-                                segments_cell.append(segment)
-            segments_col.append(segments_cell)
-        segments_grid.append(segments_col)
-    return segments_grid
+                                result_cell.append(segment)
+
+            result.append_cell(result_cell)
+    return result
 
 
-def reduce_linear_segments_recursive(current_segment: WG5Segment, segments_grid: list) -> list:
+def reduce_linear_segments_recursive(current_segment: WG5Segment, segments_grid: Grid) -> list:
     cell_x = current_segment.end_cell_x
     cell_y = current_segment.end_cell_y
     if current_segment.start_y == current_segment.end_y:
@@ -551,9 +544,9 @@ def reduce_linear_segments_recursive(current_segment: WG5Segment, segments_grid:
     return [current_segment, segments_grid]
 
 
-def reduce_linear_segments(segments_grid: list) -> list:
-    for x in range(0, len(segments_grid)):
-        for y in range(0, len(segments_grid[0])):
+def reduce_linear_segments(segments_grid: Grid) -> Grid:
+    for x in range(0, segments_grid.len_x()):
+        for y in range(0, segments_grid.len_y()):
             for s in segments_grid[x][y]:
                 if s is not False:
                     s, segments_grid = reduce_linear_segments_recursive(s, segments_grid)
@@ -566,7 +559,7 @@ def attach_segment_to_line_recursive(segments_grid: list, line: WG5Line, current
     segment = WG5LineSegment(global_line_segments_counter)
     segment.init_from_segment(current_segment)
     if line.attach_segment(segment) is False:
-        return
+        raise Exception('line.attach_segment(segment) is False')
     grid_maxs = len(segments_grid[segment.end_cell_x][segment.end_cell_y])
     for s in range(0, grid_maxs):
         if segments_grid[segment.end_cell_x][segment.end_cell_y][s] is not False:
