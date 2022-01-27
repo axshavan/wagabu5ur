@@ -9,14 +9,15 @@ BORDER_TYPE_DIAGONAL_BLTR = 2
 BORDER_TYPE_HORIZONTAL = 3
 BORDER_TYPE_DIAGONAL_TLBR = 4
 
-SEGMENT_TYPE_VERTICAL = 1
-SEGMENT_TYPE_DIAGONAL_BLTR = 2
-SEGMENT_TYPE_HORIZONTAL = 3
-SEGMENT_TYPE_DIAGONAL_TLBR = 4
+#SEGMENT_TYPE_VERTICAL = 1
+#SEGMENT_TYPE_DIAGONAL_BLTR = 2
+#SEGMENT_TYPE_HORIZONTAL = 3
+#SEGMENT_TYPE_DIAGONAL_TLBR = 4
 
 TAN_INFINITY = 10001.0
 TAN_THRESHOLD = 0.4  # threshold of the tan(angle) to merge the segments
 
+global_segments_counter = 0
 global_line_segments_counter = 0
 
 
@@ -96,29 +97,13 @@ class WG5Segment:
     end_y = 0  # pixel y
     end_cell_x = 0  # cell x
     end_cell_y = 0  # cell y
-
-    def __eq__(self, other):
-        if (
-                self.start_x == other.start_x and
-                self.start_y == other.start_y and
-                self.end_x == other.end_x and
-                self.end_y == other.end_y):
-            return True
-        if (
-                self.start_x == other.end_x and
-                self.start_y == other.end_y and
-                self.end_x == other.start_x and
-                self.end_y == other.start_y):
-            return True
-        return False
-
-
-class WG5LineSegment(WG5Segment):
     id = 0
 
-    def __init__(self, id=0):
-        self.start_segment = False
-        self.end_segments = []
+    def __init__(self, id=-1):
+        if id == -1:
+            global global_segments_counter
+            id = global_segments_counter
+            global_segments_counter += 1
         self.id = id
 
     def __eq__(self, other):
@@ -137,6 +122,17 @@ class WG5LineSegment(WG5Segment):
                 self.end_y == other.start_y):
             return True
         return False
+
+
+class WG5LineSegment(WG5Segment):
+    def __init__(self, id=-1):
+        #self.start_segment = False
+        #self.end_segments = []
+        if id == -1:
+            global global_line_segments_counter
+            id = global_line_segments_counter
+            global_line_segments_counter += 1
+        self.id = id
 
     # def attach_to_start_segment(self, segment): todo
     #     self.start_segment = segment
@@ -553,13 +549,11 @@ def reduce_linear_segments(segments_grid: Grid) -> Grid:
     return segments_grid
 
 
-def attach_segment_to_line_recursive(segments_grid: list, line: WG5Line, current_segment: WG5Segment) -> list:
-    global global_line_segments_counter
-    global_line_segments_counter += 1
-    segment = WG5LineSegment(global_line_segments_counter)
+def attach_segment_to_line_recursive(segments_grid: Grid, line: WG5Line, current_segment: WG5Segment) -> Grid:
+    segment = WG5LineSegment()
     segment.init_from_segment(current_segment)
     if line.attach_segment(segment) is False:
-        raise Exception('line.attach_segment(segment) is False')
+        return segments_grid
     grid_maxs = len(segments_grid[segment.end_cell_x][segment.end_cell_y])
     for s in range(0, grid_maxs):
         if segments_grid[segment.end_cell_x][segment.end_cell_y][s] is not False:
@@ -572,21 +566,20 @@ def attach_segment_to_line_recursive(segments_grid: list, line: WG5Line, current
     return segments_grid
 
 
-def lines_from_segments(segments_grid: list) -> list:
-    lines_grid = []
-    grid_maxx = len(segments_grid) - 1
-    grid_maxy = len(segments_grid[0]) - 1
+def lines_from_segments(segments_grid: Grid) -> Grid:
+    result = Grid()
+    grid_maxx = segments_grid.len_x() - 1
+    grid_maxy = segments_grid.len_y() - 1
     for x in range(0, grid_maxx):
-        lines_col = []
+        result.start_new_column()
         for y in range(0, grid_maxy):
-            lines_cell = []
+            result_cell = []
             grid_maxs = len(segments_grid[x][y])
             for s in range(0, grid_maxs):
                 if segments_grid[x][y][s] is not False:
                     line = WG5Line()
                     segments_grid = attach_segment_to_line_recursive(segments_grid, line, segments_grid[x][y][s])
                     segments_grid[x][y][s] = False
-                    lines_cell.append(line)
-            lines_col.append(lines_cell)
-        lines_grid.append(lines_col)
-    return lines_grid
+                    result_cell.append(line)
+            result.append_cell(result_cell)
+    return result

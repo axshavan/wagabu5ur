@@ -50,9 +50,11 @@ wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
 wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
 
 # reduce linear segments
+# todo here are the gaps formed
 wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
 
 # make lines
+# todo make the lines
 #wg5borders_lines = wg5borders.lines_from_segments(wg5borders_segments)
 
 draw = ImageDraw.Draw(image)
@@ -107,13 +109,17 @@ if True:
 if False:
     lines_count = 0
     line_segments_count = 0
+    lines_col_counter = 0
     draw = ImageDraw.Draw(image)
     for lines_col in wg5borders_lines:
+        lines_cell_counter = 0
         for lines_cell in lines_col:
             for line in lines_cell:
                 random_color = (random.randrange(0, 200), random.randrange(0, 200), random.randrange(0, 200))
                 lines_count += 1
                 if lines_count > 0:
+                    segment = line.segments[0]
+                    draw.line((segment.start_x * 4, segment.start_y * 4, lines_col_counter * 32, lines_cell_counter * 32), fill=(200, 200, 200))
                     for segment in line.segments:
                         line_segments_count += 1
                         draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=random_color)
@@ -127,5 +133,8 @@ if False:
                         image.putpixel((segment.end_x * 4 + 1, segment.end_y * 4), color)
                         image.putpixel((segment.end_x * 4, segment.end_y * 4 + 1), color)
                         image.putpixel((segment.end_x * 4 + 1, segment.end_y * 4 + 1), color)
-    print(lines_count, line_segments_count)
+            lines_cell_counter += 1
+        lines_col_counter += 1
+    print('lines count', lines_count)
+    print('lines segments count', line_segments_count)
 image.save('out.jpg', quality=95)
