@@ -43,15 +43,13 @@ wg5borders_grid = wg5borders.border_points_from_grid(pixelmap, wg5borders_grid)
 
 # reduce the number of border points
 wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
-#wg5borders.BORDER_POINTS_MERGE_THRESHOLD -= 1
-#wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
 
 # segments from the border points
 wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
 
 # reduce linear segments
 # todo here are the gaps formed
-wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
+#wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
 
 # make lines
 # todo make the lines
@@ -137,4 +135,5 @@ if False:
         lines_col_counter += 1
     print('lines count', lines_count)
     print('lines segments count', line_segments_count)
+
 image.save('out.jpg', quality=95)

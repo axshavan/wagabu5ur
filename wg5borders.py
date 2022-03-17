@@ -9,13 +9,8 @@ BORDER_TYPE_DIAGONAL_BLTR = 2
 BORDER_TYPE_HORIZONTAL = 3
 BORDER_TYPE_DIAGONAL_TLBR = 4
 
-#SEGMENT_TYPE_VERTICAL = 1
-#SEGMENT_TYPE_DIAGONAL_BLTR = 2
-#SEGMENT_TYPE_HORIZONTAL = 3
-#SEGMENT_TYPE_DIAGONAL_TLBR = 4
-
 TAN_INFINITY = 10001.0
-TAN_THRESHOLD = 0.4  # threshold of the tan(angle) to merge the segments
+TAN_THRESHOLD = 0.2  # threshold of the tan(angle) to merge the segments
 
 global_segments_counter = 0
 global_line_segments_counter = 0
@@ -35,6 +30,7 @@ class WG5BorderPoint:
     x = 0  # pixel x
     y = 0  # pixel y
     direction = 0
+    weight = 1  # how many original points contains this one after reducing
 
 
 class Grid:
@@ -344,8 +340,9 @@ def reduce_border_points(border_points_grid: Grid) -> Grid:
                                 p.direction != r.direction and
                                 abs(p.x - r.x) <= BORDER_POINTS_MERGE_THRESHOLD and
                                 abs(p.y - r.y) <= BORDER_POINTS_MERGE_THRESHOLD):
-                            p.x = round((p.x + r.x) / 2)
-                            p.y = round((p.y + r.y) / 2)
+                            p.x -= round((p.x - r.x) / (p.weight + r.weight))
+                            p.y -= round((p.y - r.y) / (p.weight + r.weight))
+                            p.weight += r.weight
                             border_points_grid[x][y][i] = False
 
                     # right
@@ -357,8 +354,9 @@ def reduce_border_points(border_points_grid: Grid) -> Grid:
                             if (
                                     abs(p.x - r.x) <= BORDER_POINTS_MERGE_THRESHOLD and
                                     abs(p.y - r.y) <= BORDER_POINTS_MERGE_THRESHOLD):
-                                p.x = round((p.x + r.x) / 2)
-                                p.y = round((p.y + r.y) / 2)
+                                p.x -= round((p.x - r.x) / (p.weight + r.weight))
+                                p.y -= round((p.y - r.y) / (p.weight + r.weight))
+                                p.weight += r.weight
                                 border_points_grid[x + 1][y][i] = False
 
                     # bottom-right
@@ -370,8 +368,9 @@ def reduce_border_points(border_points_grid: Grid) -> Grid:
                             if (
                                     abs(p.x - r.x) <= BORDER_POINTS_MERGE_THRESHOLD and
                                     abs(p.y - r.y) <= BORDER_POINTS_MERGE_THRESHOLD):
-                                p.x = round((p.x + r.x) / 2)
-                                p.y = round((p.y + r.y) / 2)
+                                p.x -= round((p.x - r.x) / (p.weight + r.weight))
+                                p.y -= round((p.y - r.y) / (p.weight + r.weight))
+                                p.weight += r.weight
                                 border_points_grid[x + 1][y + 1][i] = False
 
                     # bottom
@@ -383,8 +382,9 @@ def reduce_border_points(border_points_grid: Grid) -> Grid:
                             if (
                                     abs(p.x - r.x) <= BORDER_POINTS_MERGE_THRESHOLD and
                                     abs(p.y - r.y) <= BORDER_POINTS_MERGE_THRESHOLD):
-                                p.x = round((p.x + r.x) / 2)
-                                p.y = round((p.y + r.y) / 2)
+                                p.x -= round((p.x - r.x) / (p.weight + r.weight))
+                                p.y -= round((p.y - r.y) / (p.weight + r.weight))
+                                p.weight += r.weight
                                 border_points_grid[x][y + 1][i] = False
 
                     # bottom-left
@@ -396,8 +396,9 @@ def reduce_border_points(border_points_grid: Grid) -> Grid:
                             if (
                                     abs(p.x - r.x) <= BORDER_POINTS_MERGE_THRESHOLD and
                                     abs(p.y - r.y) <= BORDER_POINTS_MERGE_THRESHOLD):
-                                p.x = round((p.x + r.x) / 2)
-                                p.y = round((p.y + r.y) / 2)
+                                p.x -= round((p.x - r.x) / (p.weight + r.weight))
+                                p.y -= round((p.y - r.y) / (p.weight + r.weight))
+                                p.weight += r.weight
                                 border_points_grid[x - 1][y + 1][i] = False
 
                     border_points_grid[x][y][j] = p
