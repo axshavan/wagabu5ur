@@ -25,12 +25,23 @@ class WG5GridNode:
     gradient_bl = 0  # bottom-left
     pixel = []
 
+    def __repr__(self):
+        return 'WG5GridNode (' + str(self.x) + ', ' + str(self.y) + ')'\
+            + ' r:' + str(self.gradient_r)\
+            + ' br:' + str(self.gradient_br)\
+            + ' b:' + str(self.gradient_b)\
+            + ' bl:' + str(self.gradient_bl)
+
 
 class WG5BorderPoint:
     x = 0  # pixel x
     y = 0  # pixel y
     direction = 0
     weight = 1  # how many original points contains this one after reducing
+
+    def __repr__(self):
+        return 'WG5BorderPoint (' + str(self.x) + ', ' + str(self.y) + ')'\
+            + ' dir:' + str(self.direction) + ' w:' + str(self.weight)
 
 
 class Grid:
@@ -53,6 +64,39 @@ class Grid:
 
     def __getitem__(self, item):
         return self.data[item]
+
+    def repr_str_recursive(self, item, depth, counter) -> str:
+        result = ''
+        for i in range(0, 2 * depth):
+            result += ' '
+        result += str(counter) + ': '
+        if hasattr(item, '__iter__'):
+            counter = 0
+            if len(item):
+                result += "[\n"
+                depth += 1
+                for subitem in item:
+                    result += self.repr_str_recursive(subitem, depth, counter)
+                    counter += 1
+                depth -= 1
+                for i in range(0, 2 * depth):
+                    result += ' '
+                result += "]\n"
+                return result
+            else:
+                result += "[]\n"
+                return result
+        else:
+            return result + str(item) + "\n"
+
+    def __repr__(self):
+        result = "[\n"
+        counter = 0
+        for item in self.data:
+            result += self.repr_str_recursive(item, 1, counter)
+            counter += 1
+        result += "]\n"
+        return result
 
     def start_new_column(self):
         self.data.append([])
@@ -118,6 +162,11 @@ class WG5Segment:
                 self.end_y == other.start_y):
             return True
         return False
+
+    def __repr__(self):
+        return 'WG5Segment (' + str(self.start_x) + ', ' + str(self.start_y) + ') -> '\
+            + '(' + str(self.end_x) + ', ' + str(self.end_y) + '), '\
+            + '[' + str(self.end_cell_x) + ', ' + str(self.end_cell_y) + ']'
 
 
 class WG5LineSegment(WG5Segment):
@@ -493,6 +542,7 @@ def segments_from_border_points(border_points_grid: Grid) -> Grid:
     return result
 
 
+# todo here are the gaps formed
 def reduce_linear_segments_recursive(current_segment: WG5Segment, segments_grid: Grid) -> list:
     cell_x = current_segment.end_cell_x
     cell_y = current_segment.end_cell_y
@@ -531,7 +581,7 @@ def reduce_linear_segments_recursive(current_segment: WG5Segment, segments_grid:
                 if cur_ctg == r_ctg or abs((cur_ctg - r_ctg) / (cur_ctg + r_ctg)) < TAN_THRESHOLD:
                     reduce_segment = True
         if reduce_segment is True:
-            if current_segment.start_x != segments_grid[cell_x][cell_y][z].end_x or current_segment.start_y != segments_grid[cell_x][cell_y][z].end_y:
+            if current_segment != segments_grid[cell_x][cell_y][z]:
                 current_segment.end_x = segments_grid[cell_x][cell_y][z].end_x
                 current_segment.end_y = segments_grid[cell_x][cell_y][z].end_y
                 current_segment.end_cell_x = segments_grid[cell_x][cell_y][z].end_cell_x

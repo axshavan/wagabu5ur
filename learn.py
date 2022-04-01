@@ -48,11 +48,9 @@ wg5borders_grid = wg5borders.reduce_border_points(wg5borders_grid)
 wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
 
 # reduce linear segments
-# todo here are the gaps formed
-#wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
+wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
 
 # make lines
-# todo make the lines
 #wg5borders_lines = wg5borders.lines_from_segments(wg5borders_segments)
 
 draw = ImageDraw.Draw(image)
