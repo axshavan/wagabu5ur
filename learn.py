@@ -51,7 +51,10 @@ wg5borders_segments = wg5borders.segments_from_border_points(wg5borders_grid)
 wg5borders_segments = wg5borders.reduce_linear_segments(wg5borders_segments)
 
 # make lines
-#wg5borders_lines = wg5borders.lines_from_segments(wg5borders_segments)
+wg5borders_lines = wg5borders.lines_from_segments(wg5borders_segments)
+
+# join lines lines
+wg5borders_lines = wg5borders.join_lines(wg5borders_lines)
 
 draw = ImageDraw.Draw(image)
 
@@ -76,7 +79,7 @@ if False:
     print('border point count', points_count)
 
 # dump border segments to the picture
-if True:
+if False:
     segments_count = 0
     segment_col_counter = 0
     for segment_col in wg5borders_segments:
@@ -102,7 +105,8 @@ if True:
     print('segments count', segments_count)
 
 # dump segment lines to the picture
-if False:
+if True:
+    #print(wg5borders_lines)
     lines_count = 0
     line_segments_count = 0
     lines_col_counter = 0
@@ -111,24 +115,25 @@ if False:
         lines_cell_counter = 0
         for lines_cell in lines_col:
             for line in lines_cell:
-                random_color = (random.randrange(0, 200), random.randrange(0, 200), random.randrange(0, 200))
-                lines_count += 1
-                if lines_count > 0:
-                    segment = line.segments[0]
-                    draw.line((segment.start_x * 4, segment.start_y * 4, lines_col_counter * 32, lines_cell_counter * 32), fill=(200, 200, 200))
-                    for segment in line.segments:
-                        line_segments_count += 1
-                        draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=random_color)
-                        color = (40, 40, 40)
-                        image.putpixel((segment.start_x * 4, segment.start_y * 4), color)
-                        image.putpixel((segment.start_x * 4 + 1, segment.start_y * 4), color)
-                        image.putpixel((segment.start_x * 4, segment.start_y * 4 + 1), color)
-                        image.putpixel((segment.start_x * 4 + 1, segment.start_y * 4 + 1), color)
-                        color = (200, 60, 60)
-                        image.putpixel((segment.end_x * 4, segment.end_y * 4), color)
-                        image.putpixel((segment.end_x * 4 + 1, segment.end_y * 4), color)
-                        image.putpixel((segment.end_x * 4, segment.end_y * 4 + 1), color)
-                        image.putpixel((segment.end_x * 4 + 1, segment.end_y * 4 + 1), color)
+                if line is not False:
+                    random_color = (random.randrange(0, 200), random.randrange(0, 200), random.randrange(0, 200))
+                    lines_count += 1
+                    if lines_count > 0:
+                        segment = line.segments[0]
+                        draw.line((segment.start_x * 4, segment.start_y * 4, lines_col_counter * 32, lines_cell_counter * 32), fill=(200, 200, 200))
+                        for segment in line.segments:
+                            line_segments_count += 1
+                            draw.line((segment.start_x * 4, segment.start_y * 4, segment.end_x * 4, segment.end_y * 4), fill=random_color)
+                            color = (40, 40, 40)
+                            image.putpixel((segment.start_x * 4, segment.start_y * 4), color)
+                            image.putpixel((segment.start_x * 4 + 1, segment.start_y * 4), color)
+                            image.putpixel((segment.start_x * 4, segment.start_y * 4 + 1), color)
+                            image.putpixel((segment.start_x * 4 + 1, segment.start_y * 4 + 1), color)
+                            color = (200, 60, 60)
+                            image.putpixel((segment.end_x * 4, segment.end_y * 4), color)
+                            image.putpixel((segment.end_x * 4 + 1, segment.end_y * 4), color)
+                            image.putpixel((segment.end_x * 4, segment.end_y * 4 + 1), color)
+                            image.putpixel((segment.end_x * 4 + 1, segment.end_y * 4 + 1), color)
             lines_cell_counter += 1
         lines_col_counter += 1
     print('lines count', lines_count)

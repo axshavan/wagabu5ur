@@ -3,6 +3,7 @@
 GRID_STEP = 8  # the size of the grid cell, in pixels
 BORDER_THRESHOLD = 25  # the threshold of the difference in lightness enough to be a border
 BORDER_POINTS_MERGE_THRESHOLD = 4  # max distance between border points to merge the into one, in pixels
+LINE_JOIN_THRESHOLD = 10  # max distance between corner points in the different lines to be treated as one line
 
 BORDER_TYPE_VERTICAL = 1
 BORDER_TYPE_DIAGONAL_BLTR = 2
@@ -14,6 +15,7 @@ TAN_THRESHOLD = 0.2  # threshold of the tan(angle) to merge the segments
 
 global_segments_counter = 0
 global_line_segments_counter = 0
+global_line_counter = 0
 
 
 class WG5GridNode:
@@ -171,21 +173,11 @@ class WG5Segment:
 
 class WG5LineSegment(WG5Segment):
     def __init__(self, id=-1):
-        #self.start_segment = False
-        #self.end_segments = []
         if id == -1:
             global global_line_segments_counter
             id = global_line_segments_counter
             global_line_segments_counter += 1
         self.id = id
-
-    # def attach_to_start_segment(self, segment): todo
-    #     self.start_segment = segment
-    #     segment.end_segments.append(self)
-    #
-    # def attach_end_segment(self, segment):
-    #     segment.start_segment = self
-    #     self.end_segments.append(segment)
 
     def init_from_segment(self, segment: WG5Segment):
         self.start_x = segment.start_x
@@ -197,10 +189,13 @@ class WG5LineSegment(WG5Segment):
 
 
 class WG5Line:
-    def __init__(self):
+    def __init__(self, id=-1):
         self.segments = []
-        #self.first_segment = False todo
-        #self.last_segment = False  # for internal use only
+        if id == -1:
+            global global_line_counter
+            id = global_line_counter
+            global_line_counter += 1
+        self.id = id
 
     def attach_segment(self, segment: WG5LineSegment) -> bool:
         add_segment_to_line = len(self.segments) == 0
@@ -217,11 +212,6 @@ class WG5Line:
         if add_segment_to_line is False:
             return False
         self.segments.append(segment)
-        #if self.first_segment is False: todo
-        #    self.first_segment = segment
-        #if self.last_segment is not False:
-        #    self.last_segment.attach_end_segment(segment)
-        #self.last_segment = segment
         return True
 
 
@@ -456,8 +446,8 @@ def reduce_border_points(border_points_grid: Grid) -> Grid:
 
 def segments_from_border_points(border_points_grid: Grid) -> Grid:
     result = Grid()
-    grid_maxx = border_points_grid.len_x() - 1
-    grid_maxy = border_points_grid.len_y() - 1
+    grid_maxx = border_points_grid.len_x()
+    grid_maxy = border_points_grid.len_y()
     for x in range(0, grid_maxx):
         result.start_new_column()
         for y in range(0, grid_maxy):
@@ -619,8 +609,8 @@ def attach_segment_to_line_recursive(segments_grid: Grid, line: WG5Line, current
 
 def lines_from_segments(segments_grid: Grid) -> Grid:
     result = Grid()
-    grid_maxx = segments_grid.len_x() - 1
-    grid_maxy = segments_grid.len_y() - 1
+    grid_maxx = segments_grid.len_x()
+    grid_maxy = segments_grid.len_y()
     for x in range(0, grid_maxx):
         result.start_new_column()
         for y in range(0, grid_maxy):
@@ -634,3 +624,73 @@ def lines_from_segments(segments_grid: Grid) -> Grid:
                     result_cell.append(line)
             result.append_cell(result_cell)
     return result
+
+
+def check_and_attach_line_to_line(line1: WG5Line, line2: WG5Line) -> bool:
+    global LINE_JOIN_THRESHOLD
+    if line1.id == line2.id:
+        return False
+    flag_join = False
+    for i in line1.segments:
+        for j in line2.segments:
+            segment = False
+            if abs(i.start_x - j.start_x) < LINE_JOIN_THRESHOLD and abs(i.start_y - j.start_y) < LINE_JOIN_THRESHOLD:
+                segment = WG5LineSegment()
+                segment.start_x = i.start_x
+                segment.start_y = i.start_y
+                segment.end_x = j.start_x
+                segment.end_y = j.start_y
+                segment.end_cell_x = 0
+                segment.end_cell_y = 0
+                flag_join = True
+            if abs(i.start_x - j.end_x) < LINE_JOIN_THRESHOLD and abs(i.start_y - j.end_y) < LINE_JOIN_THRESHOLD:
+                segment = WG5LineSegment()
+                segment.start_x = i.start_x
+                segment.start_y = i.start_y
+                segment.end_x = j.end_x
+                segment.end_y = j.end_y
+                segment.end_cell_x = 0
+                segment.end_cell_y = 0
+                flag_join = True
+            if abs(i.end_x - j.start_x) < LINE_JOIN_THRESHOLD and abs(i.end_y - j.start_y) < LINE_JOIN_THRESHOLD:
+                segment = WG5LineSegment()
+                segment.start_x = i.end_x
+                segment.start_y = i.end_y
+                segment.end_x = j.start_x
+                segment.end_y = j.start_y
+                segment.end_cell_x = 0
+                segment.end_cell_y = 0
+                flag_join = True
+            if abs(i.end_x - j.end_x) < LINE_JOIN_THRESHOLD and abs(i.end_y - j.end_y) < LINE_JOIN_THRESHOLD:
+                segment = WG5LineSegment()
+                segment.start_x = i.end_x
+                segment.start_y = i.end_y
+                segment.end_x = j.end_x
+                segment.end_y = j.end_y
+                segment.end_cell_x = 0
+                segment.end_cell_y = 0
+                flag_join = True
+            if flag_join:
+                if segment:
+                    line1.attach_segment(segment)
+                for s in line2.segments:
+                    line1.attach_segment(s)
+                return True
+    return False
+
+
+def join_lines(lines_grid: Grid) -> Grid:
+    grid_maxx = lines_grid.len_x()
+    grid_maxy = lines_grid.len_y()
+    for x1 in range(0, grid_maxx):
+        for y1 in range(0, grid_maxy):
+            for s1 in range(0, len(lines_grid[x1][y1])):
+                if lines_grid[x1][y1][s1] is not False:
+                    for x2 in range(0, grid_maxx):
+                        for y2 in range(0, grid_maxy):
+                            for s2 in range(0, len(lines_grid[x2][y2])):
+                                if lines_grid[x2][y2][s2] is not False:
+                                    if check_and_attach_line_to_line(lines_grid[x1][y1][s1], lines_grid[x2][y2][s2]):
+                                        lines_grid[x2][y2][s2] = False
+
+    return lines_grid
