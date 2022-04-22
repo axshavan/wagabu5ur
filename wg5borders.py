@@ -166,7 +166,7 @@ class WG5Segment:
         return False
 
     def __repr__(self):
-        return 'WG5Segment (' + str(self.start_x) + ', ' + str(self.start_y) + ') -> '\
+        return 'WG5Segment:' + str(self.id) + ' (' + str(self.start_x) + ', ' + str(self.start_y) + ') -> '\
             + '(' + str(self.end_x) + ', ' + str(self.end_y) + '), '\
             + '[' + str(self.end_cell_x) + ', ' + str(self.end_cell_y) + ']'
 
@@ -178,6 +178,7 @@ class WG5LineSegment(WG5Segment):
             id = global_line_segments_counter
             global_line_segments_counter += 1
         self.id = id
+        self.order_in_line = 0
 
     def init_from_segment(self, segment: WG5Segment):
         self.start_x = segment.start_x
@@ -186,6 +187,11 @@ class WG5LineSegment(WG5Segment):
         self.end_y = segment.end_y
         self.end_cell_x = segment.end_cell_x
         self.end_cell_y = segment.end_cell_y
+
+    def __repr__(self):
+        return 'WG5LineSegment:' + str(self.id) + ':' + str(self.order_in_line) + ' (' + str(self.start_x) + ', ' + str(self.start_y) + ') -> '\
+            + '(' + str(self.end_x) + ', ' + str(self.end_y) + '), '\
+            + '[' + str(self.end_cell_x) + ', ' + str(self.end_cell_y) + ']'
 
 
 class WG5Line:
@@ -197,8 +203,11 @@ class WG5Line:
             global_line_counter += 1
         self.id = id
 
+    # todo adding the segments to the line works like shit
     def attach_segment(self, segment: WG5LineSegment) -> bool:
         add_segment_to_line = len(self.segments) == 0
+        if segment.order_in_line > 0:
+            return False
         for s in self.segments:
             if s == segment:
                 return False
@@ -206,13 +215,20 @@ class WG5Line:
                     (s.start_x == segment.start_x and s.start_y == segment.start_y) or
                     (s.end_x == segment.end_x and s.end_y == segment.end_y) or
                     (s.start_x == segment.end_x and s.start_y == segment.end_y) or
-                    (s.end_x == segment.start_x and s.end_y == segment.start_y) or True
+                    (s.end_x == segment.start_x and s.end_y == segment.start_y)
             ):
                 add_segment_to_line = True
         if add_segment_to_line is False:
             return False
+        segment.order_in_line = len(self.segments)
         self.segments.append(segment)
         return True
+
+    def __repr__(self):
+        result = '<WG5Line:'
+        for s in self.segments:
+            result = result + ' ' + str(s) + ';'
+        return result + '>'
 
 
 def grayscale_from_rgb(pixel) -> float:
@@ -598,7 +614,7 @@ def attach_segment_to_line_recursive(segments_grid: Grid, line: WG5Line, current
     grid_maxs = len(segments_grid[segment.end_cell_x][segment.end_cell_y])
     for s in range(0, grid_maxs):
         if segments_grid[segment.end_cell_x][segment.end_cell_y][s] is not False:
-            attach_segment_to_line_recursive(
+            segments_grid = attach_segment_to_line_recursive(
                 segments_grid,
                 line,
                 segments_grid[segment.end_cell_x][segment.end_cell_y][s]
@@ -692,5 +708,4 @@ def join_lines(lines_grid: Grid) -> Grid:
                                 if lines_grid[x2][y2][s2] is not False:
                                     if check_and_attach_line_to_line(lines_grid[x1][y1][s1], lines_grid[x2][y2][s2]):
                                         lines_grid[x2][y2][s2] = False
-
     return lines_grid

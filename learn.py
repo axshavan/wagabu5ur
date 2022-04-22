@@ -106,7 +106,6 @@ if False:
 
 # dump segment lines to the picture
 if True:
-    #print(wg5borders_lines)
     lines_count = 0
     line_segments_count = 0
     lines_col_counter = 0
@@ -138,5 +137,14 @@ if True:
         lines_col_counter += 1
     print('lines count', lines_count)
     print('lines segments count', line_segments_count)
+
+# dump serialized lines
+if False:
+    for lines_col in wg5borders_lines:
+        lines_cell_counter = 0
+        for lines_cell in lines_col:
+            for line in lines_cell:
+                if line is not False:
+                    print(line)
 
 image.save('out.jpg', quality=95)
